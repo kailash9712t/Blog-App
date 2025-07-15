@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 class BlogHomeScreen extends StatefulWidget {
   const BlogHomeScreen({super.key});
@@ -26,7 +27,8 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
       id: "1",
       userName: "Alice Johnson",
       userHandle: "@alice_j",
-      userAvatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
+      userAvatar:
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
       timeAgo: "2h",
       content:
           "Just finished reading an amazing article about Flutter development. The way widgets compose together is truly beautiful! 🚀",
@@ -41,7 +43,8 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
       id: "2",
       userName: "Tech Blogger",
       userHandle: "@techblogger",
-      userAvatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTCwYtl1tFUwEbfdDLVzOmud-NVp1vrzzunyMdPsCIHWH6UWEbI_Ua-I_1GOvpDYFCDgpQ&usqp=CAU",
+      userAvatar:
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTCwYtl1tFUwEbfdDLVzOmud-NVp1vrzzunyMdPsCIHWH6UWEbI_Ua-I_1GOvpDYFCDgpQ&usqp=CAU",
       timeAgo: "4h",
       content:
           "The future of mobile development is here! What do you think about the latest updates in cross-platform frameworks?",
@@ -54,7 +57,8 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
       id: "3",
       userName: "Sarah Wilson",
       userHandle: "@sarah_codes",
-      userAvatar: "https://blog.texasbar.com/files/2013/09/JessicaMangrum_smaller1.jpg",
+      userAvatar:
+          "https://blog.texasbar.com/files/2013/09/JessicaMangrum_smaller1.jpg",
       timeAgo: "6h",
       content:
           "Building beautiful UIs has never been easier. Here's my latest project showcase!",
@@ -190,6 +194,7 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
           child: GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
+              context.push('/userProfile');
             },
             child: CircleAvatar(
               radius: 18,

@@ -1,6 +1,10 @@
+import 'package:blog/Components/custom_button.dart';
+import 'package:blog/Components/text_field.dart';
+import 'package:blog/Pages/Auth/Login/State/login.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,7 +17,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
   bool _obscurePassword = true;
 
   late AnimationController _animationController;
@@ -60,223 +63,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      HapticFeedback.lightImpact();
-
-      await Future.delayed(Duration(seconds: 2));
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      HapticFeedback.mediumImpact();
-
-      if (!mounted) return;
-
-      context.go('/home');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Login successful!'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    } else {
-      HapticFeedback.heavyImpact();
-    }
-  }
-
-  Widget _buildAnimatedTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required IconData prefixIcon,
-    required String? Function(String?) validator,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    TextInputType keyboardType = TextInputType.text,
-    int delay = 0,
-  }) {
-    return AnimatedBuilder(
-      animation: _slideAnimation,
-      builder: (context, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: Offset(0, 0.3),
-            end: Offset.zero,
-          ).animate(
-            CurvedAnimation(
-              parent: _slideController,
-              curve: Interval(delay * 0.1, 1.0, curve: Curves.easeOut),
-            ),
-          ),
-          child: FadeTransition(
-            opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-              CurvedAnimation(
-                parent: _slideController,
-                curve: Interval(delay * 0.1, 1.0, curve: Curves.easeOut),
-              ),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: TextFormField(
-                controller: controller,
-                obscureText: obscureText,
-                keyboardType: keyboardType,
-                decoration: InputDecoration(
-                  labelText: labelText,
-                  prefixIcon: Icon(prefixIcon, color: Colors.blue),
-                  suffixIcon: suffixIcon,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                ),
-                validator: validator,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildAnimatedButton({
-    required String text,
-    required VoidCallback? onPressed,
-    bool isLoading = false,
-    Color? backgroundColor,
-    Color? textColor,
-    bool isOutlined = false,
-    IconData? icon,
-    int delay = 0,
-  }) {
-    return AnimatedBuilder(
-      animation: _slideAnimation,
-      builder: (context, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: Offset(0, 0.3),
-            end: Offset.zero,
-          ).animate(
-            CurvedAnimation(
-              parent: _slideController,
-              curve: Interval(delay * 0.1, 1.0, curve: Curves.easeOut),
-            ),
-          ),
-          child: FadeTransition(
-            opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-              CurvedAnimation(
-                parent: _slideController,
-                curve: Interval(delay * 0.1, 1.0, curve: Curves.easeOut),
-              ),
-            ),
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 300),
-              decoration: BoxDecoration(
-                boxShadow:
-                    onPressed != null
-                        ? [
-                          BoxShadow(
-                            color: (backgroundColor ?? Colors.blue).withOpacity(
-                              0.3,
-                            ),
-                            blurRadius: 15,
-                            offset: Offset(0, 8),
-                          ),
-                        ]
-                        : [],
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child:
-                  isOutlined
-                      ? OutlinedButton.icon(
-                        onPressed: onPressed,
-                        icon:
-                            icon != null
-                                ? Icon(icon, size: 20)
-                                : SizedBox.shrink(),
-                        label: Text(
-                          text,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          side: BorderSide(color: Colors.blue, width: 2),
-                        ),
-                      )
-                      : ElevatedButton(
-                        onPressed: onPressed,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: backgroundColor ?? Colors.blue,
-                          foregroundColor: textColor ?? Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 0,
-                        ),
-                        child:
-                            isLoading
-                                ? SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                                : Text(
-                                  text,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                      ),
-            ),
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -374,7 +160,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                         SizedBox(height: 50),
 
-                        _buildAnimatedTextField(
+                        CustomTextField(
                           controller: _emailController,
                           labelText: 'Email',
                           prefixIcon: Icons.email_outlined,
@@ -395,7 +181,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                         SizedBox(height: 20),
 
-                        _buildAnimatedTextField(
+                        CustomTextField(
                           controller: _passwordController,
                           labelText: 'Password',
                           prefixIcon: Icons.lock_outlined,
@@ -504,11 +290,20 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                         SizedBox(height: 30),
 
-                        _buildAnimatedButton(
-                          text: 'Sign In',
-                          onPressed: _isLoading ? null : _login,
-                          isLoading: _isLoading,
-                          delay: 4,
+                        Consumer<LoginPageModel>(
+                          builder: (context, instance, child) {
+                            return CustomButton(
+                              text: 'Sign In',
+                              onPressed:
+                                  instance.isLoading
+                                      ? null
+                                      : () {
+                                        instance.login(context, _formKey, _emailController.text, _passwordController.text);
+                                      },
+                              isLoading: instance.isLoading,
+                              delay: 4,
+                            );
+                          },
                         ),
 
                         SizedBox(height: 30),
@@ -593,7 +388,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                         SizedBox(height: 30),
 
-                        _buildAnimatedButton(
+                        CustomButton(
                           text: 'Continue with Google',
                           onPressed: () {
                             HapticFeedback.selectionClick();
@@ -616,6 +411,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 ),
                               ),
                             );
+                            context.push("/profileSetUp1");
                           },
                           isOutlined: true,
                           icon: Icons.g_mobiledata,

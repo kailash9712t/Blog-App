@@ -1,5 +1,8 @@
+import 'package:blog/Components/text_field.dart';
+import 'package:blog/Pages/Auth/Register/State/register.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -15,7 +18,6 @@ class _RegisterPageState extends State<RegisterPage>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
@@ -60,49 +62,6 @@ class _RegisterPageState extends State<RegisterPage>
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _register() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      HapticFeedback.lightImpact();
-
-      await Future.delayed(Duration(seconds: 2));
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      HapticFeedback.mediumImpact();
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Registration successful!'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-
-      if (!mounted) return;
-
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      HapticFeedback.heavyImpact();
-    }
   }
 
   @override
@@ -209,12 +168,27 @@ class _RegisterPageState extends State<RegisterPage>
 
                             SizedBox(height: 40),
 
-                            _buildAnimatedButton(
-                              text: 'Create Account',
-                              onPressed: _isLoading ? null : _register,
-                              isLoading: _isLoading,
-                              backgroundColor: Colors.blue,
-                              delay: 5,
+                            Consumer<RegisterModel>(
+                              builder: (context, instance, child) {
+                                return _buildAnimatedButton(
+                                  text: 'Create Account',
+                                  onPressed:
+                                      instance.isLoading
+                                          ? null
+                                          : () {
+                                            instance.register(
+                                              context,
+                                              _formKey,
+                                              _nameController.text,
+                                              _emailController.text,
+                                              _passwordController.text
+                                            );
+                                          },
+                                  isLoading: instance.isLoading,
+                                  backgroundColor: Colors.blue,
+                                  delay: 5,
+                                );
+                              },
                             ),
 
                             SizedBox(height: 30),
@@ -236,13 +210,13 @@ class _RegisterPageState extends State<RegisterPage>
 
   List<Widget> _buildAnimatedFormFields() {
     return [
-      _buildAnimatedTextField(
+      CustomTextField(
         controller: _nameController,
-        labelText: 'Full Name',
+        labelText: 'Username',
         prefixIcon: Icons.person_outlined,
         validator: (value) {
           if (value == null || value.isEmpty) {
-            return 'Please enter your full name';
+            return 'Please enter Username';
           }
           return null;
         },
@@ -251,7 +225,7 @@ class _RegisterPageState extends State<RegisterPage>
 
       SizedBox(height: 20),
 
-      _buildAnimatedTextField(
+      CustomTextField(
         controller: _emailController,
         labelText: 'Email',
         prefixIcon: Icons.email_outlined,
@@ -270,7 +244,7 @@ class _RegisterPageState extends State<RegisterPage>
 
       SizedBox(height: 20),
 
-      _buildAnimatedTextField(
+      CustomTextField(
         controller: _passwordController,
         labelText: 'Password',
         prefixIcon: Icons.lock_outlined,
@@ -301,7 +275,7 @@ class _RegisterPageState extends State<RegisterPage>
 
       SizedBox(height: 20),
 
-      _buildAnimatedTextField(
+      CustomTextField(
         controller: _confirmPasswordController,
         labelText: 'Confirm Password',
         prefixIcon: Icons.lock_outlined,
@@ -330,79 +304,6 @@ class _RegisterPageState extends State<RegisterPage>
         delay: 4,
       ),
     ];
-  }
-
-  Widget _buildAnimatedTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required IconData prefixIcon,
-    required String? Function(String?) validator,
-    required int delay,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: Duration(milliseconds: 800),
-      curve: Curves.easeOutBack,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 50 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: TextFormField(
-                controller: controller,
-                obscureText: obscureText,
-                keyboardType: keyboardType,
-                validator: validator,
-                decoration: InputDecoration(
-                  labelText: labelText,
-                  prefixIcon: Icon(prefixIcon, color: Colors.blue),
-                  suffixIcon: suffixIcon,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none,
-                  ),
-                  floatingLabelStyle: TextStyle(color: Colors.blue),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
-                  labelStyle: TextStyle(color: Colors.grey[600], fontSize: 16),
-                  errorStyle: TextStyle(fontSize: 12, height: 1.2),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide(color: Colors.blue, width: 2),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide(color: Colors.red, width: 2),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide(color: Colors.red, width: 2),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
   }
 
   Widget _buildAnimatedButton({

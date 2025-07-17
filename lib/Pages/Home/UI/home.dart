@@ -173,6 +173,7 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       elevation: 0,
+      automaticallyImplyLeading: false,
       backgroundColor: Colors.white,
       title: Text(
         'BlogSpace',

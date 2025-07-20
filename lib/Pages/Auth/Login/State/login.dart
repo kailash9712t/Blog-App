@@ -1,4 +1,5 @@
 import 'package:blog/Firebase/firebase.dart';
+import 'package:blog/Utils/snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -19,47 +20,23 @@ class LoginPageModel extends ChangeNotifier {
 
         HapticFeedback.lightImpact();
 
-        bool isLogin = await FirebaseOperation().signIn(email, password);
+        Map<String, dynamic> response = await FirebaseOperation().signIn(
+          email,
+          password,
+        );
+
+        bool isLogin = response["status"] as bool;
+        String message = response["message"];
 
         HapticFeedback.mediumImpact();
 
         if (!context.mounted) return;
 
         if (isLogin) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('Login successful!'),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          CustomSnackbar().showMessage(context, Icons.check_circle ,Colors.green, message);
           context.go('/home');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.close, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('Invalid credential'),
-                ],
-              ),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-          );
+          CustomSnackbar().showMessage(context,Icons.close , Colors.red, message);
         }
       } else {
         HapticFeedback.heavyImpact();

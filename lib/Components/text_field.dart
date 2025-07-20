@@ -10,6 +10,7 @@ class CustomTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final int delay;
   final int? maxLines;
+  final int? maxLength;
 
   const CustomTextField({
     super.key,
@@ -22,6 +23,7 @@ class CustomTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.delay = 0,
     this.maxLines = 1,
+    this.maxLength
   });
 
   @override
@@ -88,6 +90,8 @@ class _CustomTextFieldState extends State<CustomTextField>
                 controller: widget.controller,
                 obscureText: widget.obscureText,
                 keyboardType: widget.keyboardType,
+                maxLength: widget.maxLength,
+                maxLines: widget.maxLines,
                 decoration: InputDecoration(
                   labelText: widget.labelText,
                   prefixIcon: Icon(widget.prefixIcon, color: Colors.blue),
@@ -105,10 +109,6 @@ class _CustomTextFieldState extends State<CustomTextField>
                             ? 20
                             : 16,
                   ),
-                  // contentPadding: EdgeInsets.symmetric(
-                  //   horizontal: 20,
-                  //   vertical: 16,
-                  // ),
                 ),
                 validator: widget.validator,
               ),

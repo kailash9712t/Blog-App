@@ -1,4 +1,8 @@
+import 'package:blog/Pages/Auth/EmailVerification/State/email_verification.dart';
+import 'package:blog/Pages/Auth/EmailVerification/UI/email_verification.dart';
 import 'package:blog/Pages/Auth/Login/State/login.dart';
+import 'package:blog/Pages/Auth/ProfileSetUp/State/profile_set.dart';
+import 'package:blog/Pages/Auth/ProfileSetUp1/State/profile_set_up1.dart';
 import 'package:blog/Pages/Auth/Register/State/register.dart';
 import 'package:blog/Routes/routes.dart';
 import 'package:blog/firebase_options.dart';
@@ -23,7 +27,11 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => LoginPageModel()),
-        ChangeNotifierProvider(create: (context) => RegisterModel())
+        ChangeNotifierProvider(create: (context) => RegisterModel()),
+        ChangeNotifierProvider(create: (context) => ProfileSetModel()),
+        ChangeNotifierProvider(create: (context) => ProfileSetUp1()),
+        ChangeNotifierProvider(create: (context) => EmailVerificationModel()),
+
       ],
       child: MaterialApp.router(
         title: 'Flutter Demo',

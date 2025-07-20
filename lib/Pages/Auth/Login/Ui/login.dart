@@ -298,7 +298,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   instance.isLoading
                                       ? null
                                       : () {
-                                        instance.login(context, _formKey, _emailController.text, _passwordController.text);
+                                        instance.login(
+                                          context,
+                                          _formKey,
+                                          _emailController.text,
+                                          _passwordController.text,
+                                        );
                                       },
                               isLoading: instance.isLoading,
                               delay: 4,
@@ -411,7 +416,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 ),
                               ),
                             );
-                            context.push("/profileSetUp1");
+                            context.push("/profileSetUp");
                           },
                           isOutlined: true,
                           icon: Icons.g_mobiledata,
@@ -461,21 +466,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     TextButton(
                                       onPressed: () {
                                         HapticFeedback.selectionClick();
-                                        Navigator.pushNamed(
-                                          context,
-                                          '/register',
-                                        );
+                                        context.push("/profileSetUp");
                                       },
-                                      child: TextButton(
-                                        onPressed: () {
-                                          context.push('/register');
-                                        },
-                                        child: Text(
-                                          'Sign Up',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.blue,
-                                          ),
+                                      child: Text(
+                                        'Sign Up',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue,
                                         ),
                                       ),
                                     ),

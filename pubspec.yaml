@@ -39,6 +39,12 @@ dependencies:
   firebase_auth: ^5.6.2
   cloud_firestore: ^5.6.11
   firebase_core: ^3.15.1
+  firebase_storage: ^12.4.9
+  logger: ^2.6.0
+  cloudinary_api: ^1.1.1
+  cloudinary_url_gen: ^1.8.0
+  image_picker: ^1.1.2
+  uuid: ^4.5.1
   provider: ^6.1.5
 
 dev_dependencies:

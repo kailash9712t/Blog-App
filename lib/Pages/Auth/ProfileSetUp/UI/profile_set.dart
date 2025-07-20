@@ -1,9 +1,10 @@
 import 'package:blog/Components/custom_button.dart';
 import 'package:blog/Components/text_field.dart';
 import 'package:blog/Data/list_of_contries.dart';
+import 'package:blog/Pages/Auth/ProfileSetUp/State/profile_set.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -13,8 +14,6 @@ class ProfileSetupPage extends StatefulWidget {
 }
 
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
-  bool _isLoading = false;
-
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
@@ -28,52 +27,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     super.dispose();
   }
 
-  Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      HapticFeedback.lightImpact();
-
-      await Future.delayed(Duration(seconds: 2));
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      HapticFeedback.mediumImpact();
-
-      if (!mounted) return;
-
-      context.push("/profileSetUp1");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Login successful!'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
-    } else {
-      HapticFeedback.heavyImpact();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: SafeArea(
+      body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Form(
@@ -178,11 +136,25 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 SizedBox(
                   width: double.infinity,
                   height: 56,
-                  child: CustomButton(
-                    text: 'Sign In',
-                    onPressed: _isLoading ? null : _login,
-                    isLoading: _isLoading,
-                    delay: 4,
+                  child: Consumer<ProfileSetModel>(
+                    builder: (context, instance, child) {
+                      return CustomButton(
+                        text: 'Submit',
+                        onPressed:
+                            instance.isLoading
+                                ? null
+                                : () {
+                                  instance.profileDataStore(
+                                    _formKey,
+                                    context,
+                                    _usernameController.text,
+                                    _selectedCountry,
+                                  );
+                                },
+                        isLoading: instance.isLoading,
+                        delay: 4,
+                      );
+                    },
                   ),
                 ),
 

@@ -1,3 +1,4 @@
+import 'package:blog/Components/custom_button.dart';
 import 'package:blog/Components/text_field.dart';
 import 'package:blog/Pages/Auth/Register/State/register.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,6 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage>
     with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -57,7 +57,6 @@ class _RegisterPageState extends State<RegisterPage>
   void dispose() {
     _animationController.dispose();
     _slideController.dispose();
-    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -170,7 +169,7 @@ class _RegisterPageState extends State<RegisterPage>
 
                             Consumer<RegisterModel>(
                               builder: (context, instance, child) {
-                                return _buildAnimatedButton(
+                                return CustomButton(
                                   text: 'Create Account',
                                   onPressed:
                                       instance.isLoading
@@ -179,9 +178,8 @@ class _RegisterPageState extends State<RegisterPage>
                                             instance.register(
                                               context,
                                               _formKey,
-                                              _nameController.text,
                                               _emailController.text,
-                                              _passwordController.text
+                                              _passwordController.text,
                                             );
                                           },
                                   isLoading: instance.isLoading,
@@ -190,10 +188,6 @@ class _RegisterPageState extends State<RegisterPage>
                                 );
                               },
                             ),
-
-                            SizedBox(height: 30),
-
-                            _buildAnimatedSignInLink(),
                           ],
                         ),
                       ),
@@ -210,21 +204,6 @@ class _RegisterPageState extends State<RegisterPage>
 
   List<Widget> _buildAnimatedFormFields() {
     return [
-      CustomTextField(
-        controller: _nameController,
-        labelText: 'Username',
-        prefixIcon: Icons.person_outlined,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter Username';
-          }
-          return null;
-        },
-        delay: 1,
-      ),
-
-      SizedBox(height: 20),
-
       CustomTextField(
         controller: _emailController,
         labelText: 'Email',
@@ -304,108 +283,5 @@ class _RegisterPageState extends State<RegisterPage>
         delay: 4,
       ),
     ];
-  }
-
-  Widget _buildAnimatedButton({
-    required String text,
-    required VoidCallback? onPressed,
-    required bool isLoading,
-    required Color backgroundColor,
-    required int delay,
-  }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: Duration(milliseconds: 1000),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: Container(
-            height: 56,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              gradient: LinearGradient(
-                colors: [backgroundColor, backgroundColor.withOpacity(0.8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: backgroundColor.withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: Offset(0, 8),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-              child:
-                  isLoading
-                      ? SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                          strokeWidth: 2,
-                        ),
-                      )
-                      : Text(
-                        text,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildAnimatedSignInLink() {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: Duration(milliseconds: 1200),
-      curve: Curves.easeInOut,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Already have an account? ',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              ),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  Navigator.pushReplacementNamed(context, '/login');
-                },
-                child: Text(
-                  'Sign In',
-                  style: TextStyle(
-                    color: Colors.blue,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 }

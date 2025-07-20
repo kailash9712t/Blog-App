@@ -1,89 +1,77 @@
 import 'package:blog/Firebase/firebase.dart';
+import 'package:blog/Utils/snackbar.dart';
+import 'package:blog/Utils/user_data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 class RegisterModel extends ChangeNotifier {
   bool isLoading = false;
+  String fileName = "RegisterModel";
 
   Future<void> register(
     BuildContext context,
     GlobalKey<FormState> formKey,
-    String username,
     String email,
     String password,
   ) async {
-    if (formKey.currentState!.validate()) {
-      isLoading = true;
-      notifyListeners();
+    try {
+      if (formKey.currentState!.validate()) {
+        isLoading = true;
+        notifyListeners();
 
-      HapticFeedback.lightImpact();
+        HapticFeedback.lightImpact();
 
-      await Future.delayed(Duration(seconds: 2));
+        await Future.delayed(Duration(seconds: 2));
 
-      HapticFeedback.mediumImpact();
-
-      if (!context.mounted) return;
-
-      Map<String, dynamic> userData = {
-        "username": username,
-        "email": email,
-        "password": password,
-        "joiningDate": DateTime.now(),
-        "bio": null,
-        "location": null,
-        "isProfileCompleted": false,
-        "DisplayName" : null
-      };
-
-      bool isDataStore = await FireStoreOperation().storeUserData(userData);
-
-      if (!context.mounted) return;
-
-      if (isDataStore) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('Registration successful!'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+        HapticFeedback.mediumImpact();
 
         if (!context.mounted) return;
 
-        context.go("/profileSetUp");
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('Failed'),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-      }
-    } else {
-      HapticFeedback.heavyImpact();
-    }
+        Map<String, dynamic> userData = {
+          "username": UserDataProvider().userModel.username,
+          "email": email,
+          "password": password,
+        };
 
-    isLoading = false;
-    notifyListeners();
+        bool isDataStore = await FireStoreOperation().updateData(userData);
+        Map<String, dynamic> response = await FirebaseOperation().createNew(
+          email,
+          password,
+        );
+
+        bool status = response["status"] as bool;
+        String message = response["message"];
+
+        if (!context.mounted) return;
+
+        if (isDataStore && status) {
+          CustomSnackbar().showMessage(
+            context,
+            Icons.check_circle,
+            Colors.green,
+            message,
+          );
+
+          if (!context.mounted) return;
+
+          context.push("/emailVerification?email=$email");
+        } else {
+          CustomSnackbar().showMessage(
+            context,
+            Icons.close,
+            Colors.red,
+            message,
+          );
+        }
+      } else {
+        HapticFeedback.heavyImpact();
+      }
+
+      isLoading = false;
+      notifyListeners();
+    } catch (error) {
+      logs.e("$fileName.register ${error.toString()}");
+    }
   }
 }

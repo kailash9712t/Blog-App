@@ -1,5 +1,4 @@
 import 'package:blog/Pages/Auth/EmailVerification/State/email_verification.dart';
-import 'package:blog/Pages/Auth/EmailVerification/UI/email_verification.dart';
 import 'package:blog/Pages/Auth/Login/State/login.dart';
 import 'package:blog/Pages/Auth/ProfileSetUp/State/profile_set.dart';
 import 'package:blog/Pages/Auth/ProfileSetUp1/State/profile_set_up1.dart';

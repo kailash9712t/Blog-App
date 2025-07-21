@@ -6,8 +6,8 @@ A Flutter-based social media application inspired by Twitter/X interface, where 
 ## 📱 Screenshots
 
 <div align="center">
-    <img src="Screenshot/homepage.png" alt="Home Page" width="250"  style="margin: 0 10px;">
-    <img src="Screenshot/profilepage.png" alt="Profile Page" width="250"  style="margin: 0 10px;">
+    <img src="ScreenShot/homepage.png" alt="Home Page" width="250">
+    <img src="ScreenShot/profilepage.png" alt="Profile Page" width="250">
 </div>
 
 ## ✨ Features

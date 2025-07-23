@@ -17,6 +17,7 @@ class EmailVerificationModel extends ChangeNotifier {
   bool isExpired = false;
   String? errorMessage;
   String? email;
+
   Logger logs = Logger(
     level: kReleaseMode ? Level.off : Level.debug,
     printer: PrettyPrinter(methodCount: 1, colors: true),
@@ -45,7 +46,9 @@ class EmailVerificationModel extends ChangeNotifier {
       logs.i(user.email);
       logs.i(user.email?.length);
 
-      await user.sendEmailVerification();
+      unawaited(user.sendEmailVerification().catchError((onError) {
+        logs.w("$filename.startCountDown ${onError.toString()}");
+      }));
 
       timer = Timer.periodic(const Duration(seconds: 1), (time) {
         if (context.mounted) {
@@ -55,8 +58,8 @@ class EmailVerificationModel extends ChangeNotifier {
           logs.i(user?.emailVerified);
 
           if (user!.emailVerified) {
-            context.go("/profileSetUp1");
-            dispose();
+            context.go("/profileSetUp1?edit=false");
+            resetState();
             return;
           }
 
@@ -159,9 +162,18 @@ class EmailVerificationModel extends ChangeNotifier {
     return '$maskedUsername@$domain';
   }
 
-  void dispose() {
+  void resetState() {
     timer?.cancel();
     timeoutTimer?.cancel();
-    super.dispose();
+
+    timer = null;
+    timeoutTimer = null;
+    countdownSeconds = 60;
+    isResendEnabled = false;
+    isLoading = false;
+    isExpired = false;
+
+    errorMessage = null;
+    email = null;
   }
 }

@@ -30,13 +30,13 @@ class _LoadingPageState extends State<LoadingPage> {
   void initialTask() {
     User? user = auth.currentUser;
 
-    context.go("/login");
+    // context.go("/login");
 
-    // if (user == null || !user.emailVerified) {
-    //   context.go("/login");
-    // } else {
-    //   context.go("/home");
-    // }
+    if (user == null || !user.emailVerified) {
+      context.go("/login");
+    } else {
+      context.go("/home");
+    }
   }
 
   @override

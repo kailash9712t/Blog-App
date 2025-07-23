@@ -35,10 +35,8 @@ class RegisterModel extends ChangeNotifier {
         };
 
         bool isDataStore = await FireStoreOperation().updateData(userData);
-        Map<String, dynamic> response = await FirebaseOperation().createNew(
-          email,
-          password,
-        );
+        Map<String, dynamic> response = await FirebaseOperation()
+            .createNew(UserDataProvider().userModel.username!, email, password);
 
         bool status = response["status"] as bool;
         String message = response["message"];

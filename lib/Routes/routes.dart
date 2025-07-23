@@ -23,13 +23,16 @@ GoRouter route = GoRouter(
       path: "/profileSetUp",
       builder: (context, state) => ProfileSetupPage(),
     ),
-    GoRoute(path: "/profileSetUp1", builder: (context, state) => ProfilePage()),
+    GoRoute(
+        path: "/profileSetUp1",
+        builder: (context, state) {
+          bool editPage = bool.parse(state.uri.queryParameters["editPage"]!);
+          return ProfilePage(editPage: editPage);
+        }),
     GoRoute(
       path: "/emailVerification",
-
-      builder:
-          (context, state) =>
-              EmailVerificationPage(email: state.uri.queryParameters['email']),
+      builder: (context, state) =>
+          EmailVerificationPage(email: state.uri.queryParameters['email']),
     ),
     GoRoute(path: "/", builder: (context, state) => LoadingPage()),
   ],

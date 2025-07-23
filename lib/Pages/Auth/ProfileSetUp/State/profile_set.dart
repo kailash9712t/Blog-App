@@ -35,7 +35,7 @@ class ProfileSetModel extends ChangeNotifier {
         HapticFeedback.mediumImpact();
 
         Map<String, dynamic> userData = {
-          "username" : username,
+          "username": username,
           "email": null,
           "password": null,
           "joiningDate": DateTime.now(),
@@ -47,6 +47,22 @@ class ProfileSetModel extends ChangeNotifier {
           "profileImageUrl": null,
         };
 
+        Map<String, dynamic> data =
+            await FireStoreOperation().isUsernameAlreadyPresent(username);
+
+        bool status = data["status"] as bool;
+
+        if (!status && context.mounted) {
+          String message = data["message"];
+
+          CustomSnackbar()
+              .showMessage(context, Icons.close, Colors.red, message);
+
+          isLoading = false;
+          notifyListeners();
+          return;
+        }
+
         bool response = await FireStoreOperation().storeUserData(userData);
 
         if (!context.mounted) return;
@@ -55,10 +71,10 @@ class ProfileSetModel extends ChangeNotifier {
           UserDataProvider().userModel.username = username;
 
           context.push("/register");
-
-          CustomSnackbar().showMessage(context,Icons.check_circle, Colors.green, "Data Saved!");
+          
         } else {
-          CustomSnackbar().showMessage(context,Icons.close ,Colors.red, "Failed");
+          CustomSnackbar()
+              .showMessage(context, Icons.close, Colors.red, "Failed");
         }
       } else {
         HapticFeedback.heavyImpact();
@@ -66,5 +82,7 @@ class ProfileSetModel extends ChangeNotifier {
     } catch (error) {
       logs.e("$currentFileName.$currentMethod Error : - ${error.toString()}");
     }
+    isLoading = false;
+    notifyListeners();
   }
 }

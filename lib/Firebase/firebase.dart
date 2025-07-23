@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/web.dart';
 
@@ -16,7 +13,8 @@ String fileName = "firebase.dart";
 class FirebaseOperation {
   final auth = FirebaseAuth.instance;
 
-  Future<Map<String, dynamic>> createNew(String email, String password) async {
+  Future<Map<String, dynamic>> createNew(
+      String username, String email, String password) async {
     bool status = false;
     String message = "";
     try {
@@ -24,6 +22,8 @@ class FirebaseOperation {
         email: email,
         password: password,
       );
+
+      response.user?.updateDisplayName(username);
 
       logs.i("Google New Account Created : $response");
 
@@ -45,19 +45,28 @@ class FirebaseOperation {
   }
 
   Future<Map<String, dynamic>> signIn(String email, String password) async {
-    bool status = false;
+    int status = 0;
     String message = "";
 
     try {
       await auth.signInWithEmailAndPassword(email: email, password: password);
-      status = true;
+      status = 0;
       message = "user Login";
+
+      User? user = auth.currentUser;
+
+      if (user != null && !user.emailVerified) {
+        status = 1;
+        message = "email not verify";
+      }
+      
     } on FirebaseException catch (e) {
-      status = false;
+      status = 2;
       message = e.code;
-      logs.e("Firebase Exception : ${e.code == "account-exists-with-different-credential"}");
+      logs.e(
+          "Firebase Exception : ${e.code == "account-exists-with-different-credential"}");
     } catch (error) {
-      status = false;
+      status = 2;
       message = error.toString();
       logs.e("Firebase.signIn : ${error.toString()}");
     }
@@ -70,6 +79,20 @@ class FirebaseOperation {
     } catch (error) {
       logs.e("Firebase.emailVerification : ${error.toString()}");
     }
+  }
+
+  String? retriveUsername() {
+    try {
+      User? user = auth.currentUser;
+
+      if (user == null) return null;
+
+      return user.displayName;
+    } catch (error) {
+      logs.e("$fileName.retriveUsername ${error.toString()}");
+    }
+
+    return null;
   }
 }
 
@@ -91,6 +114,32 @@ class FireStoreOperation {
     return false;
   }
 
+  Future<bool> followOperation(
+      String follow, String follower, String operation) async {
+    DocumentReference followReference =
+        instance.collection("Follow").doc(follow);
+    DocumentReference followerReference =
+        instance.collection("Follow").doc(follower);
+    try {
+      await followReference.update({
+        "Followers": operation == "add"
+            ? FieldValue.arrayUnion([follower])
+            : FieldValue.arrayRemove([follower])
+      });
+
+      await followerReference.update({
+        "Following": operation == "add"
+            ? FieldValue.arrayUnion([follow])
+            : FieldValue.arrayRemove([follow])
+      });
+
+      return true;
+    } catch (error) {
+      logs.e("$fileName.addFollow ${error.toString()}");
+    }
+    return false;
+  }
+
   Future<bool> updateData(Map<String, dynamic> updateData) async {
     try {
       await instance
@@ -104,35 +153,22 @@ class FireStoreOperation {
     }
     return false;
   }
-}
 
-class Storage {
-  final FirebaseStorage instance = FirebaseStorage.instance;
-  Future<String?> uploadFile(File file) async {
+  Future<Map<String, dynamic>> isUsernameAlreadyPresent(String username) async {
     try {
-      String filepath = file.path.split("/").last;
+      DocumentReference reference = instance.collection("Users").doc(username);
+      DocumentSnapshot snapshot = await reference.get();
 
-      logs.i(filepath);
+      if (!snapshot.exists) return {"status": true, "message": "new user!"};
+      Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+      String? email = data["email"];
 
-      Reference ref = instance.ref().child(filepath);
-
-      UploadTask task = ref.putFile(file);
-
-      logs.i("task : - $task");
-
-      final snapShot = await task;
-
-      String? url;
-
-      logs.i(snapShot.state);
-
-      if (snapShot.state == TaskState.success)
-        await snapShot.ref.getDownloadURL();
-
-      return url;
+      if (email == null) return {"status": true, "message": "new user!"};
     } catch (error) {
-      logs.e("Firebase.uploadFile : ${error.toString()}");
+      logs.e("$fileName.isUserAlreadyPresent ${error.toString()}");
+      return {"status": false, "message": "Internal error"};
     }
-    return null;
+
+    return {"status": false, "message": "username already used!"};
   }
 }

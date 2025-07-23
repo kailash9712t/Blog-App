@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:blog/Firebase/firebase.dart';
 import 'package:blog/Utils/cloudinary.dart';
 import 'package:blog/Utils/snackbar.dart';
+import 'package:blog/Utils/user_data_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import 'package:logger/web.dart';
 class ProfileSetUp1 extends ChangeNotifier {
   bool isLoading = false;
   String currentFileName = "ProfileSetUp1";
+
   Logger logs = Logger(
     level: kReleaseMode ? Level.off : Level.debug,
     printer: PrettyPrinter(colors: true),
@@ -41,7 +43,7 @@ class ProfileSetUp1 extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print("Error : - $e");
+      logs.e("$currentFileName.pickImageFromSource ${e.toString()}");
     }
   }
 
@@ -52,7 +54,6 @@ class ProfileSetUp1 extends ChangeNotifier {
   ) async {
     String currentMethod = "profileDataStore1";
     try {
-      print("let me check");
       isLoading = true;
       notifyListeners();
 
@@ -65,18 +66,20 @@ class ProfileSetUp1 extends ChangeNotifier {
       String? coverImage;
 
       if (profileImageUrl != null) {
-        await CloudinaryOperation().uploadImage(profileImageUrl!);
+        profileImage =
+            await CloudinaryOperation().uploadImage(profileImageUrl!);
       }
       if (coverImageUrl != null) {
-        await CloudinaryOperation().uploadImage(coverImageUrl!);
+        coverImage = await CloudinaryOperation().uploadImage(coverImageUrl!);
       }
-      print("ProfileImage : - $coverImage");
 
       Map<String, dynamic> userData = {
         "displayName": displayName,
         "bio": bio,
         "profileImageUrl": profileImage,
         "coverImageUrl": coverImage,
+        "username": FirebaseOperation().retriveUsername(),
+        "isProfileCompleted": true
       };
 
       bool response = await FireStoreOperation().updateData(userData);
@@ -86,13 +89,18 @@ class ProfileSetUp1 extends ChangeNotifier {
       if (response) {
         context.push("/home");
 
-        CustomSnackbar().showMessage(context,Icons.check_circle ,Colors.green, "Data Saved!");
+        CustomSnackbar().showMessage(
+            context, Icons.check_circle, Colors.green, "Data Saved!");
       } else {
-        CustomSnackbar().showMessage(context,Icons.close, Colors.red, "Failed");
+        CustomSnackbar()
+            .showMessage(context, Icons.close, Colors.red, "Failed");
       }
     } catch (error) {
       logs.e("$currentFileName.$currentMethod Error : - ${error.toString()}");
     }
+
+    isLoading = false;
+    notifyListeners();
   }
 
   Future<void> pickProfileImage() async {
@@ -109,7 +117,7 @@ class ProfileSetUp1 extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      print("Error : - $e");
+      logs.e("$currentFileName.pickProfileImage ${e.toString()}");
     }
   }
 
@@ -127,7 +135,7 @@ class ProfileSetUp1 extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      print("Error : - $e");
+      logs.e("$currentFileName.pickCoverImage ${e.toString()}");
     }
   }
 
@@ -137,5 +145,10 @@ class ProfileSetUp1 extends ChangeNotifier {
   ) {
     displayNameController.clear();
     bioController.clear();
+  }
+
+  void resetState() {
+    profileImageUrl = null;
+    coverImageUrl = null;
   }
 }

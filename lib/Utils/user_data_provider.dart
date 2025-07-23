@@ -17,4 +17,5 @@ class UserDataProvider {
   }
 
   factory UserDataProvider() => instance;
+
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 class UserProfilePage extends StatefulWidget {
   const UserProfilePage({super.key});
@@ -16,12 +17,13 @@ class _UserProfilePageState extends State<UserProfilePage>
   late Animation<Offset> _slideAnimation;
 
   bool _isFollowing = false;
-  bool _isOwnProfile = true; 
+  bool _isOwnProfile = true;
 
   final UserProfile userProfile = UserProfile(
     name: "John Doe",
     handle: "@johndoe",
-    avatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
+    avatar:
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
     coverImage:
         "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTZB3inQS_rlFHLkaHoCVN7aXs4ZiYNySBtg&s",
     bio:
@@ -42,7 +44,8 @@ class _UserProfilePageState extends State<UserProfilePage>
       id: "1",
       userName: "John Doe",
       userHandle: "@johndoe",
-      userAvatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
+      userAvatar:
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
       timeAgo: "3h",
       content:
           "Just shipped a new Flutter app! The development experience keeps getting better with each update. 🔥",
@@ -57,7 +60,8 @@ class _UserProfilePageState extends State<UserProfilePage>
       id: "2",
       userName: "John Doe",
       userHandle: "@johndoe",
-      userAvatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
+      userAvatar:
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
       timeAgo: "1d",
       content:
           "Working on some exciting new features. Can't wait to share them with you all! Stay tuned... 👀",
@@ -70,7 +74,8 @@ class _UserProfilePageState extends State<UserProfilePage>
       id: "3",
       userName: "John Doe",
       userHandle: "@johndoe",
-      userAvatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
+      userAvatar:
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
       timeAgo: "2d",
       content:
           "Beautiful sunset today! Sometimes you need to step away from the code and enjoy the simple things in life. 🌅",
@@ -247,6 +252,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                             onPressed: () {
                               HapticFeedback.selectionClick();
                               _showEditProfileDialog();
+                              context.push("/profileSetUp1?editPage=true");
                             },
                             isPrimary: false,
                           )

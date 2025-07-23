@@ -7,4 +7,6 @@ class UserModel {
   String? bio;
   String? location;
   bool? completeProfile;
+  String? coverUrl;
+  String? profileUrl;
 }

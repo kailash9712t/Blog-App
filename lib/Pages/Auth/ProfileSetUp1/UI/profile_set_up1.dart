@@ -1,5 +1,7 @@
 import 'package:blog/Components/custom_button.dart';
+import 'package:blog/Components/custom_dropdown_list.dart';
 import 'package:blog/Components/text_field.dart';
+import 'package:blog/Data/list_of_contries.dart';
 import 'package:blog/Pages/Auth/ProfileSetUp1/State/profile_set_up1.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +9,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
+  bool editPage;
+
+  ProfilePage({super.key, required this.editPage});
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
@@ -15,6 +20,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _displayNameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   bool isLoading = false;
+  String? _selectedCountry;
 
   void _showImageSourceDialog({required bool isProfile}) {
     showModalBottomSheet(
@@ -37,9 +43,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: () {
                   Navigator.pop(context);
                   context.read<ProfileSetUp1>().pickImageFromSource(
-                    ImageSource.gallery,
-                    isProfile,
-                  );
+                        ImageSource.gallery,
+                        isProfile,
+                      );
                 },
               ),
               ListTile(
@@ -49,9 +55,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   Navigator.pop(context);
 
                   context.read<ProfileSetUp1>().pickImageFromSource(
-                    ImageSource.gallery,
-                    isProfile,
-                  );
+                        ImageSource.gallery,
+                        isProfile,
+                      );
                 },
               ),
             ],
@@ -74,21 +80,19 @@ class _ProfilePageState extends State<ProfilePage> {
                     height: 200,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      gradient:
-                          instance.coverImageUrl == null
-                              ? LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [Color(0xFF4A90E2), Color(0xFF357ABD)],
-                              )
-                              : null,
-                      image:
-                          instance.coverImageUrl != null
-                              ? DecorationImage(
-                                image: FileImage(instance.coverImageUrl!),
-                                fit: BoxFit.cover,
-                              )
-                              : null,
+                      gradient: instance.coverImageUrl == null
+                          ? LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Color(0xFF4A90E2), Color(0xFF357ABD)],
+                            )
+                          : null,
+                      image: instance.coverImageUrl != null
+                          ? DecorationImage(
+                              image: FileImage(instance.coverImageUrl!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
                     child: Stack(
                       children: [
@@ -137,13 +141,12 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           ),
                         ),
-
                         Positioned(
                           bottom: 16,
                           right: 16,
                           child: GestureDetector(
-                            onTap:
-                                () => _showImageSourceDialog(isProfile: false),
+                            onTap: () =>
+                                _showImageSourceDialog(isProfile: false),
                             child: Container(
                               padding: EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -180,7 +183,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   );
                 },
               ),
-
               Transform.translate(
                 offset: Offset(0, -50),
                 child: Stack(
@@ -196,17 +198,16 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: Consumer<ProfileSetUp1>(
                         builder: (context, instance, child) {
                           return ClipOval(
-                            child:
-                                instance.profileImageUrl != null
-                                    ? Image.file(
-                                      instance.profileImageUrl!,
-                                      fit: BoxFit.cover,
-                                    )
-                                    : Icon(
-                                      Icons.person,
-                                      size: 60,
-                                      color: Colors.grey[400],
-                                    ),
+                            child: instance.profileImageUrl != null
+                                ? Image.file(
+                                    instance.profileImageUrl!,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: Colors.grey[400],
+                                  ),
                           );
                         },
                       ),
@@ -242,7 +243,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
-
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -272,7 +272,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           delay: 1,
                         ),
                       ),
-
                       Container(
                         margin: EdgeInsets.only(bottom: 8),
                         child: CustomTextField(
@@ -291,9 +290,27 @@ class _ProfilePageState extends State<ProfilePage> {
                           maxLines: 4,
                         ),
                       ),
-
-                      SizedBox(height: 20),
-
+                      widget.editPage
+                          ? CustomDropdownField(
+                              selectedValue: _selectedCountry,
+                              items: top100Countries,
+                              labelText: 'Country',
+                              prefixIcon: Icons.location_on_outlined,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCountry = value;
+                                });
+                              },
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please select your country';
+                                }
+                                return null;
+                              },
+                              delay: 2,
+                            )
+                          : SizedBox.shrink(),
+                      SizedBox(height: 30),
                       SizedBox(
                         width: double.infinity,
                         height: 52,
@@ -301,63 +318,19 @@ class _ProfilePageState extends State<ProfilePage> {
                           builder: (context, instance, child) {
                             return CustomButton(
                               text: 'Submit',
-                              onPressed:
-                                  isLoading
-                                      ? null
-                                      : () {
-                                        instance.profileDataStore1(
-                                          context,
-                                          _displayNameController.text,
-                                          _bioController.text,
-                                        );
-                                      },
-                              isLoading: isLoading,
+                              onPressed: instance.isLoading
+                                  ? null
+                                  : () {
+                                      instance.profileDataStore1(
+                                        context,
+                                        _displayNameController.text,
+                                        _bioController.text,
+                                      );
+                                    },
+                              isLoading: instance.isLoading,
                               delay: 4,
                             );
                           },
-                        ),
-                      ),
-
-                      SizedBox(height: 16),
-
-                      Text(
-                        'OR',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 14),
-                      ),
-
-                      SizedBox(height: 16),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            context.read<ProfileSetUp1>().handleCancel(
-                              _bioController,
-                              _displayNameController,
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.grey[600],
-                            side: BorderSide(color: Colors.grey[300]!),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.cancel_outlined, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Cancel',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                     ],

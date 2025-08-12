@@ -4,6 +4,7 @@ import 'package:blog/Utils/user_data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class RegisterModel extends ChangeNotifier {
   bool isLoading = false;
@@ -15,6 +16,7 @@ class RegisterModel extends ChangeNotifier {
     String email,
     String password,
   ) async {
+    UserDataProvider data = context.read<UserDataProvider>();
     try {
       if (formKey.currentState!.validate()) {
         isLoading = true;
@@ -28,15 +30,24 @@ class RegisterModel extends ChangeNotifier {
 
         if (!context.mounted) return;
 
+        DateTime currentDateAndTime = DateTime.now();
+
+        print("test1");
+
         Map<String, dynamic> userData = {
-          "username": UserDataProvider().userModel.username,
+          "username": data.userModel.username,
           "email": email,
           "password": password,
+          "joiningDate": currentDateAndTime,
+          "followers": 0,
+          "following": 0
         };
+
+        print("test2");
 
         bool isDataStore = await FireStoreOperation().updateData(userData);
         Map<String, dynamic> response = await FirebaseOperation()
-            .createNew(UserDataProvider().userModel.username!, email, password);
+            .createNew(data.userModel.username!, email, password);
 
         bool status = response["status"] as bool;
         String message = response["message"];
@@ -52,6 +63,9 @@ class RegisterModel extends ChangeNotifier {
           );
 
           if (!context.mounted) return;
+
+          data.loadData(
+              email: email, joiningDate: currentDateAndTime);
 
           context.push("/emailVerification?email=$email");
         } else {

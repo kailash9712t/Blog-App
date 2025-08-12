@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/web.dart';
+import 'package:provider/provider.dart';
 
 class ProfileSetModel extends ChangeNotifier {
   bool isLoading = false;
@@ -38,7 +39,7 @@ class ProfileSetModel extends ChangeNotifier {
           "username": username,
           "email": null,
           "password": null,
-          "joiningDate": DateTime.now(),
+          "joiningDate": null,
           "bio": null,
           "location": location,
           "isProfileCompleted": false,
@@ -68,10 +69,11 @@ class ProfileSetModel extends ChangeNotifier {
         if (!context.mounted) return;
 
         if (response) {
-          UserDataProvider().userModel.username = username;
+          context
+              .read<UserDataProvider>()
+              .loadData(username: username, location: location);
 
           context.push("/register");
-          
         } else {
           CustomSnackbar()
               .showMessage(context, Icons.close, Colors.red, "Failed");

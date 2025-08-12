@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:blog/Firebase/firebase.dart';
 import 'package:blog/Utils/cloudinary.dart';
 import 'package:blog/Utils/snackbar.dart';
@@ -10,10 +9,12 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:logger/web.dart';
+import 'package:provider/provider.dart';
 
 class ProfileSetUp1 extends ChangeNotifier {
   bool isLoading = false;
   String currentFileName = "ProfileSetUp1";
+  String? selectedCountry;
 
   Logger logs = Logger(
     level: kReleaseMode ? Level.off : Level.debug,
@@ -53,6 +54,9 @@ class ProfileSetUp1 extends ChangeNotifier {
     String bio,
   ) async {
     String currentMethod = "profileDataStore1";
+
+    UserDataProvider userDataInstance = context.read<UserDataProvider>();
+
     try {
       isLoading = true;
       notifyListeners();
@@ -79,15 +83,31 @@ class ProfileSetUp1 extends ChangeNotifier {
         "profileImageUrl": profileImage,
         "coverImageUrl": coverImage,
         "username": FirebaseOperation().retriveUsername(),
-        "isProfileCompleted": true
+        "isProfileCompleted": true,
       };
+
+      if (selectedCountry != null) userData["location"] = selectedCountry;
 
       bool response = await FireStoreOperation().updateData(userData);
 
       if (!context.mounted) return;
 
       if (response) {
-        context.push("/home");
+        print("let see here");
+        userDataInstance.loadData(
+            displayName: displayName,
+            bio: bio,
+            profileUrl: profileImage,
+            coverUrl: coverImage,
+            location: selectedCountry);
+
+        print("check point 1"); 
+
+        await userDataInstance.storeLocally();
+
+        if (!context.mounted) return;
+
+        context.go("/home");
 
         CustomSnackbar().showMessage(
             context, Icons.check_circle, Colors.green, "Data Saved!");
@@ -150,5 +170,10 @@ class ProfileSetUp1 extends ChangeNotifier {
   void resetState() {
     profileImageUrl = null;
     coverImageUrl = null;
+  }
+
+  void selectValueOnList(String value) {
+    selectedCountry = value;
+    notifyListeners();
   }
 }

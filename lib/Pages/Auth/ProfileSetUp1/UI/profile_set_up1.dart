@@ -9,9 +9,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
-  bool editPage;
+  final bool editPage;
 
-  ProfilePage({super.key, required this.editPage});
+  const ProfilePage({super.key, required this.editPage});
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
@@ -20,7 +20,12 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _displayNameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   bool isLoading = false;
-  String? _selectedCountry;
+
+  @override
+  void didChangeDependencies() {
+    context.read<ProfileSetUp1>().resetState();
+    super.didChangeDependencies();
+  }
 
   void _showImageSourceDialog({required bool isProfile}) {
     showModalBottomSheet(
@@ -55,7 +60,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   Navigator.pop(context);
 
                   context.read<ProfileSetUp1>().pickImageFromSource(
-                        ImageSource.gallery,
+                        ImageSource.camera,
                         isProfile,
                       );
                 },
@@ -291,24 +296,24 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       widget.editPage
-                          ? CustomDropdownField(
-                              selectedValue: _selectedCountry,
-                              items: top100Countries,
-                              labelText: 'Country',
-                              prefixIcon: Icons.location_on_outlined,
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedCountry = value;
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please select your country';
-                                }
-                                return null;
-                              },
-                              delay: 2,
-                            )
+                          ? Consumer<ProfileSetUp1>(
+                              builder: (context, instance, child) {
+                              return CustomDropdownField(
+                                selectedValue: instance.selectedCountry,
+                                items: top100Countries,
+                                labelText: 'Country',
+                                prefixIcon: Icons.location_on_outlined,
+                                onChanged: (value) =>
+                                    instance.selectValueOnList(value!),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please select your country';
+                                  }
+                                  return null;
+                                },
+                                delay: 2,
+                              );
+                            })
                           : SizedBox.shrink(),
                       SizedBox(height: 30),
                       SizedBox(

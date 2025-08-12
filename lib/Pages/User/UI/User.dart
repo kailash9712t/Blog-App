@@ -1,9 +1,21 @@
+import 'package:blog/Models/BlogPost/post.dart';
+import 'package:blog/Models/Hive_Model/UserData/user.dart';
+import 'package:blog/Pages/Home/State/home.dart';
+import 'package:blog/Pages/User/State/user.dart';
+import 'package:blog/Utils/date_and_time.dart';
+import 'package:blog/Utils/user_data_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logger/web.dart';
+import 'package:provider/provider.dart';
 
 class UserProfilePage extends StatefulWidget {
-  const UserProfilePage({super.key});
+  final bool isUserProfile;
+  final String username;
+  const UserProfilePage(
+      {super.key, required this.isUserProfile, required this.username});
 
   @override
   _UserProfilePageState createState() => _UserProfilePageState();
@@ -16,81 +28,13 @@ class _UserProfilePageState extends State<UserProfilePage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  bool _isFollowing = false;
-  bool _isOwnProfile = true;
-
-  final UserProfile userProfile = UserProfile(
-    name: "John Doe",
-    handle: "@johndoe",
-    avatar:
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
-    coverImage:
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTZB3inQS_rlFHLkaHoCVN7aXs4ZiYNySBtg&s",
-    bio:
-        "Flutter Developer & Tech Enthusiast 🚀\nBuilding beautiful mobile experiences\n📍 San Francisco, CA",
-    location: "San Francisco, CA",
-    website: "johndoe.dev",
-    joinDate: "March 2020",
-    following: 892,
-    followers: 1247,
-    posts: 348,
-    isVerified: true,
+  Logger logs = Logger(
+    level: kReleaseMode ? Level.off : Level.debug,
+    printer: PrettyPrinter(methodCount: 1, colors: true),
   );
-
-  // default user
-
-  List<BlogPost> userPosts = [
-    BlogPost(
-      id: "1",
-      userName: "John Doe",
-      userHandle: "@johndoe",
-      userAvatar:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
-      timeAgo: "3h",
-      content:
-          "Just shipped a new Flutter app! The development experience keeps getting better with each update. 🔥",
-      imageUrl:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTZB3inQS_rlFHLkaHoCVN7aXs4ZiYNySBtg&s",
-      likes: 156,
-      comments: 23,
-      reposts: 45,
-      isLiked: false,
-    ),
-    BlogPost(
-      id: "2",
-      userName: "John Doe",
-      userHandle: "@johndoe",
-      userAvatar:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
-      timeAgo: "1d",
-      content:
-          "Working on some exciting new features. Can't wait to share them with you all! Stay tuned... 👀",
-      likes: 89,
-      comments: 12,
-      reposts: 8,
-      isLiked: true,
-    ),
-    BlogPost(
-      id: "3",
-      userName: "John Doe",
-      userHandle: "@johndoe",
-      userAvatar:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
-      timeAgo: "2d",
-      content:
-          "Beautiful sunset today! Sometimes you need to step away from the code and enjoy the simple things in life. 🌅",
-      imageUrl:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTZB3inQS_rlFHLkaHoCVN7aXs4ZiYNySBtg&s",
-      likes: 234,
-      comments: 67,
-      reposts: 23,
-      isLiked: false,
-    ),
-  ];
 
   @override
   void initState() {
-    super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _animationController = AnimationController(
       duration: Duration(milliseconds: 600),
@@ -109,6 +53,26 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
 
     _animationController.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      mainTask();
+      context.read<UserPageModel>().isFollowing = true;
+    });
+    super.initState();
+  }
+
+  void mainTask() async {
+    await context
+        .read<UserPageModel>()
+        .initialTask(context, widget.isUserProfile, widget.username);
+
+    if (!mounted) return;
+
+    context.read<UserPageModel>().loadPost(context);
+  }
+
+  @override
+  void didChangeDependencies() async {
+    super.didChangeDependencies();
   }
 
   @override
@@ -116,27 +80,6 @@ class _UserProfilePageState extends State<UserProfilePage>
     _tabController.dispose();
     _animationController.dispose();
     super.dispose();
-  }
-
-  void _toggleFollow() {
-    setState(() {
-      _isFollowing = !_isFollowing;
-      if (_isFollowing) {
-        userProfile.followers++;
-      } else {
-        userProfile.followers--;
-      }
-    });
-    HapticFeedback.lightImpact();
-  }
-
-  void _toggleLike(String postId) {
-    setState(() {
-      final post = userPosts.firstWhere((p) => p.id == postId);
-      post.isLiked = !post.isLiked;
-      post.likes += post.isLiked ? 1 : -1;
-    });
-    HapticFeedback.lightImpact();
   }
 
   @override
@@ -167,27 +110,30 @@ class _UserProfilePageState extends State<UserProfilePage>
       elevation: 0,
       backgroundColor: Colors.white,
       pinned: true,
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back, color: Colors.black),
-        onPressed: () {
-          HapticFeedback.selectionClick();
-          Navigator.pop(context);
-        },
-      ),
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            userProfile.name,
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          Selector<UserPageModel, String?>(
+            builder: (_, displayName, __) {
+              return Text(
+                displayName ?? "user",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            },
+            selector: (_, model) => model.userModel.displayName,
           ),
-          Text(
-            '${userProfile.posts} posts',
-            style: TextStyle(color: Colors.grey[600], fontSize: 14),
+          Selector<UserPageModel, int>(
+            builder: (_, posts, __) {
+              return Text(
+                '$posts posts',
+                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              );
+            },
+            selector: (_, model) => model.userModel.posts,
           ),
         ],
       ),
@@ -204,6 +150,7 @@ class _UserProfilePageState extends State<UserProfilePage>
   }
 
   Widget _buildSliverProfileHeader() {
+    UserModel user = context.read<UserDataProvider>().userModel;
     return SliverToBoxAdapter(
       child: SlideTransition(
         position: _slideAnimation,
@@ -211,24 +158,31 @@ class _UserProfilePageState extends State<UserProfilePage>
           color: Colors.white,
           child: Column(
             children: [
-              // background image
-              Container(
-                height: 200,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage(userProfile.coverImage),
+              Consumer<UserDataProvider>(builder: (context, instance, child) {
+                return SizedBox(
+                  height: 200,
+                  width: double.infinity,
+                  child: Image.network(
+                    instance.userModel.coverUrl ?? "",
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Image.asset(
+                          "Assets/Image/image_failed_to_load.png",
+                          height: 60,
+                          width: 60,
+                          fit: BoxFit.contain,
+                        ),
+                      );
+                    },
                   ),
-                ),
-              ),
-              // profile info
+                );
+              }),
               Container(
                 padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // avatar
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
@@ -240,18 +194,42 @@ class _UserProfilePageState extends State<UserProfilePage>
                               border: Border.all(color: Colors.white, width: 4),
                             ),
                             child: CircleAvatar(
-                              radius: 40,
-                              backgroundImage: NetworkImage(userProfile.avatar),
+                              radius: 50,
+                              backgroundColor: Colors.grey,
+                              child: ClipOval(
+                                child: Consumer<UserDataProvider>(
+                                    builder: (context, instance, child) {
+                                  logs.i(
+                                      "profile url : ${instance.userModel.profileUrl}");
+                                  return Image.network(
+                                    instance.userModel.profileUrl ?? '',
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, trace) {
+                                      return Image.asset(
+                                        "Assets/Image/default_user.png",
+                                        width: 48,
+                                        height: 48,
+                                        fit: BoxFit.cover,
+                                      );
+                                    },
+                                    loadingBuilder: (context, child, progress) {
+                                      if (progress == null) return child;
+                                      return CircularProgressIndicator();
+                                    },
+                                  );
+                                }),
+                              ),
                             ),
                           ),
                         ),
                         Spacer(),
-                        if (_isOwnProfile)
+                        if (widget.isUserProfile)
                           _buildActionButton(
                             text: 'Edit Profile',
                             onPressed: () {
                               HapticFeedback.selectionClick();
-                              _showEditProfileDialog();
                               context.push("/profileSetUp1?editPage=true");
                             },
                             isPrimary: false,
@@ -267,45 +245,65 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 isPrimary: false,
                               ),
                               SizedBox(width: 8),
-                              _buildActionButton(
-                                text: _isFollowing ? 'Following' : 'Follow',
-                                onPressed: _toggleFollow,
-                                isPrimary: !_isFollowing,
-                              ),
+                              Selector<UserPageModel, bool>(
+                                  builder: (_, isFollow, __) {
+                                    return _buildActionButton(
+                                      text: isFollow ? 'Following' : 'Follow',
+                                      onPressed: () {
+                                        context
+                                            .read<UserPageModel>()
+                                            .follow(context, {});
+                                      },
+                                      isPrimary: !isFollow,
+                                    );
+                                  },
+                                  selector: (__, model) => model.isFollowing),
                             ],
                           ),
                       ],
                     ),
                     SizedBox(height: 8),
-                    // user info
                     Row(
                       children: [
-                        Text(
-                          userProfile.name,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (userProfile.isVerified) ...[
+                        Selector<UserPageModel, String?>(
+                            builder: (_, displayName, __) {
+                              return Text(
+                                displayName ?? "Failed",
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            },
+                            selector: (_, model) =>
+                                model.userModel.displayName),
+                        if (user.isVerify) ...[
                           SizedBox(width: 4),
                           Icon(Icons.verified, color: Colors.blue, size: 20),
                         ],
                       ],
                     ),
                     SizedBox(height: 4),
-                    Text(
-                      userProfile.handle,
-                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    Selector<UserPageModel, String?>(
+                        builder: (_, username, __) {
+                          return Text(
+                            username ?? "Failed",
+                            style: TextStyle(
+                                fontSize: 16, color: Colors.grey[600]),
+                          );
+                        },
+                        selector: (_, model) => model.userModel.username),
+                    SizedBox(height: 12),
+                    Selector<UserPageModel, String?>(
+                      builder: (_, bio, __) {
+                        return Text(
+                          bio ?? "Failed",
+                          style: TextStyle(fontSize: 16, height: 1.4),
+                        );
+                      },
+                      selector: (_, model) => model.userModel.bio,
                     ),
                     SizedBox(height: 12),
-                    // bio
-                    Text(
-                      userProfile.bio,
-                      style: TextStyle(fontSize: 16, height: 1.4),
-                    ),
-                    SizedBox(height: 12),
-                    // location
                     Row(
                       children: [
                         Icon(
@@ -314,21 +312,30 @@ class _UserProfilePageState extends State<UserProfilePage>
                           size: 16,
                         ),
                         SizedBox(width: 4),
-                        Text(
-                          userProfile.location,
-                          style: TextStyle(color: Colors.grey[600]),
+                        Selector<UserPageModel, String?>(
+                          builder: (_, location, __) {
+                            return Text(
+                              location ?? "Failed",
+                              style: TextStyle(color: Colors.grey[600]),
+                            );
+                          },
+                          selector: (_, model) => model.userModel.location,
                         ),
                         SizedBox(width: 16),
                         Icon(Icons.link, color: Colors.grey[600], size: 16),
                         SizedBox(width: 4),
-                        Text(
-                          userProfile.website,
-                          style: TextStyle(color: Colors.blue),
+                        Selector<UserPageModel, String?>(
+                          builder: (_, website, __) {
+                            return Text(
+                              website ?? "kailash.dev",
+                              style: TextStyle(color: Colors.blue),
+                            );
+                          },
+                          selector: (_, model) => model.userModel.website,
                         ),
                       ],
                     ),
                     SizedBox(height: 8),
-                    // join date
                     Row(
                       children: [
                         Icon(
@@ -337,19 +344,33 @@ class _UserProfilePageState extends State<UserProfilePage>
                           size: 16,
                         ),
                         SizedBox(width: 4),
-                        Text(
-                          'Joined ${userProfile.joinDate}',
-                          style: TextStyle(color: Colors.grey[600]),
+                        Selector<UserPageModel, String?>(
+                          builder: (_, joiningDate, __) {
+                            return Text(
+                              'Joined $joiningDate',
+                              style: TextStyle(color: Colors.grey[600]),
+                            );
+                          },
+                          selector: (_, model) => model.userModel.joiningDate,
                         ),
                       ],
                     ),
                     SizedBox(height: 16),
-                    // state
                     Row(
                       children: [
-                        _buildStatItem('Following', userProfile.following),
+                        Selector<UserPageModel, int>(
+                          builder: (_, following, __) {
+                            return _buildStatItem('Following', following);
+                          },
+                          selector: (_, model) => model.userModel.following,
+                        ),
                         SizedBox(width: 20),
-                        _buildStatItem('Followers', userProfile.followers),
+                        Selector<UserPageModel, int>(
+                          builder: (_, followers, __) {
+                            return _buildStatItem('Following', followers);
+                          },
+                          selector: (_, model) => model.userModel.followers,
+                        ),
                       ],
                     ),
                   ],
@@ -367,7 +388,7 @@ class _UserProfilePageState extends State<UserProfilePage>
     required VoidCallback onPressed,
     required bool isPrimary,
   }) {
-    return Container(
+    return SizedBox(
       height: 36,
       child: ElevatedButton(
         onPressed: onPressed,
@@ -429,57 +450,66 @@ class _UserProfilePageState extends State<UserProfilePage>
   }
 
   Widget _buildPostsTab() {
-    return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: userPosts.length,
-      itemBuilder: (context, index) {
-        return _buildPostCard(userPosts[index]);
-      },
-    );
+    return Consumer<UserPageModel>(builder: (context, instance, child) {
+      return ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: instance.personalPost.length,
+        itemBuilder: (context, index) {
+          return _buildPostCard(instance.personalPost[index]);
+        },
+      );
+    });
   }
 
   Widget _buildMediaTab() {
-    final mediaPosts =
-        userPosts.where((post) => post.imageUrl != null).toList();
+    return Consumer<UserPageModel>(builder: (context, instance, child) {
+      final mediaPosts = instance.personalPost
+          .where((post) => post.profileUrl != null)
+          .toList();
 
-    return GridView.builder(
-      padding: EdgeInsets.all(16),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: mediaPosts.length,
-      itemBuilder: (context, index) {
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-          },
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              mediaPosts[index].imageUrl!,
-              fit: BoxFit.cover,
+      return GridView.builder(
+        padding: EdgeInsets.all(16),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: mediaPosts.length,
+        itemBuilder: (context, index) {
+          return GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                mediaPosts[index].profileUrl!,
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    });
   }
 
   Widget _buildLikesTab() {
-    final likedPosts = userPosts.where((post) => post.isLiked).toList();
+    return Consumer<UserPageModel>(builder: (context, instance, child) {
+      final likedPosts =
+          instance.personalPost.where((post) => post.isLiked).toList();
 
-    return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: likedPosts.length,
-      itemBuilder: (context, index) {
-        return _buildPostCard(likedPosts[index]);
-      },
-    );
+      return ListView.builder(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: likedPosts.length,
+        itemBuilder: (context, index) {
+          return _buildPostCard(likedPosts[index]);
+        },
+      );
+    });
   }
 
   Widget _buildPostCard(BlogPost post) {
+    UserModel userData = context.read<UserDataProvider>().userModel;
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       padding: EdgeInsets.all(16),
@@ -497,12 +527,31 @@ class _UserProfilePageState extends State<UserProfilePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // post header
           Row(
             children: [
               CircleAvatar(
-                radius: 20,
-                backgroundImage: NetworkImage(post.userAvatar),
+                radius: 24,
+                backgroundColor: Colors.grey,
+                child: ClipOval(
+                  child: Image.network(
+                    userData.profileUrl ?? '',
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, trace) {
+                      return Image.asset(
+                        "Assets/Image/default_user.png",
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return CircularProgressIndicator();
+                    },
+                  ),
+                ),
               ),
               SizedBox(width: 12),
               Expanded(
@@ -512,15 +561,15 @@ class _UserProfilePageState extends State<UserProfilePage>
                     Row(
                       children: [
                         Text(
-                          post.userName,
+                          post.userHandle ?? "username",
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
                         ),
-                        SizedBox(width: 4),
+                        SizedBox(width: 6),
                         Text(
-                          post.userHandle,
+                          post.userName,
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -528,7 +577,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                         ),
                         SizedBox(width: 4),
                         Text(
-                          '• ${post.timeAgo}',
+                          '• ${DateAndTime().timeDifference(DateAndTime().stringTimeStampToDateTime(post.timeAgo))}',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -548,22 +597,14 @@ class _UserProfilePageState extends State<UserProfilePage>
             ],
           ),
           SizedBox(height: 12),
-          // content
           Text(post.content, style: TextStyle(fontSize: 16, height: 1.4)),
-          if (post.imageUrl != null) ...[
+
+          if (post.contentImage.isNotEmpty) ...[
             SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                post.imageUrl!,
-                width: double.infinity,
-                height: 200,
-                fit: BoxFit.cover,
-              ),
-            ),
+            _buildPhotoLayout(post.contentImage),
           ],
+
           SizedBox(height: 16),
-          // action
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -583,12 +624,15 @@ class _UserProfilePageState extends State<UserProfilePage>
                   HapticFeedback.selectionClick();
                 },
               ),
-              _buildPostAction(
-                icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
-                count: post.likes,
-                color: post.isLiked ? Colors.red : Colors.grey[600]!,
-                onTap: () => _toggleLike(post.id),
-              ),
+              Consumer<HomePageModel>(builder: (context, instance, child) {
+                return _buildPostAction(
+                  icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
+                  count: post.likes,
+                  color: post.isLiked ? Colors.red : Colors.grey[600]!,
+                  onTap: () =>
+                      context.read<UserPageModel>().toggleLike(post.id),
+                );
+              }),
               _buildPostAction(
                 icon: Icons.share,
                 count: 0,
@@ -603,6 +647,326 @@ class _UserProfilePageState extends State<UserProfilePage>
         ],
       ),
     );
+  }
+
+  Widget _buildPhotoLayout(List<String> images) {
+    final int imageCount = images.length;
+
+    if (imageCount == 1) {
+      // Single image - full width
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          images[0],
+          width: double.infinity,
+          height: 200,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              width: double.infinity,
+              height: 200,
+              color: Colors.grey[300],
+              child: Icon(Icons.image_not_supported, color: Colors.grey[600]),
+            );
+          },
+        ),
+      );
+    } else if (imageCount == 2) {
+      // Two images - side by side
+      return Row(
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                images[0],
+                height: 150,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 150,
+                    color: Colors.grey[300],
+                    child: Icon(Icons.image_not_supported,
+                        color: Colors.grey[600]),
+                  );
+                },
+              ),
+            ),
+          ),
+          SizedBox(width: 4),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                images[1],
+                height: 150,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 150,
+                    color: Colors.grey[300],
+                    child: Icon(Icons.image_not_supported,
+                        color: Colors.grey[600]),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      );
+    } else if (imageCount == 3) {
+      // Three images - first image on left, two stacked on right
+      return Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                images[0],
+                height: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    color: Colors.grey[300],
+                    child: Icon(Icons.image_not_supported,
+                        color: Colors.grey[600]),
+                  );
+                },
+              ),
+            ),
+          ),
+          SizedBox(width: 4),
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    images[1],
+                    height: 98,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 98,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported,
+                            color: Colors.grey[600]),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    images[2],
+                    height: 98,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 98,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported,
+                            color: Colors.grey[600]),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    } else if (imageCount == 4) {
+      // Four images - 2x2 grid
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    images[0],
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 120,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported,
+                            color: Colors.grey[600]),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(width: 4),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    images[1],
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 120,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported,
+                            color: Colors.grey[600]),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    images[2],
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 120,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported,
+                            color: Colors.grey[600]),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(width: 4),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    images[3],
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 120,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported,
+                            color: Colors.grey[600]),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    } else {
+      // More than 4 images - show first 3 and "+X more" overlay on the last one
+      final int remainingCount = imageCount - 3;
+      return Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                images[0],
+                height: 200,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    color: Colors.grey[300],
+                    child: Icon(Icons.image_not_supported,
+                        color: Colors.grey[600]),
+                  );
+                },
+              ),
+            ),
+          ),
+          SizedBox(width: 4),
+          Expanded(
+            flex: 1,
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    images[1],
+                    height: 98,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: 98,
+                        color: Colors.grey[300],
+                        child: Icon(Icons.image_not_supported,
+                            color: Colors.grey[600]),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 4),
+                Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        images[2],
+                        height: 98,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 98,
+                            color: Colors.grey[300],
+                            child: Icon(Icons.image_not_supported,
+                                color: Colors.grey[600]),
+                          );
+                        },
+                      ),
+                    ),
+                    if (remainingCount > 0)
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '+$remainingCount',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
   }
 
   Widget _buildPostAction({
@@ -683,30 +1047,6 @@ class _UserProfilePageState extends State<UserProfilePage>
       },
     );
   }
-
-  void _showEditProfileDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Edit Profile'),
-          content: Text(
-            'Profile editing functionality would be implemented here.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
@@ -733,62 +1073,4 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
     return false;
   }
-}
-
-class UserProfile {
-  final String name;
-  final String handle;
-  final String avatar;
-  final String coverImage;
-  final String bio;
-  final String location;
-  final String website;
-  final String joinDate;
-  final int following;
-  int followers;
-  final int posts;
-  final bool isVerified;
-
-  UserProfile({
-    required this.name,
-    required this.handle,
-    required this.avatar,
-    required this.coverImage,
-    required this.bio,
-    required this.location,
-    required this.website,
-    required this.joinDate,
-    required this.following,
-    required this.followers,
-    required this.posts,
-    required this.isVerified,
-  });
-}
-
-class BlogPost {
-  final String id;
-  final String userName;
-  final String userHandle;
-  final String userAvatar;
-  final String timeAgo;
-  final String content;
-  final String? imageUrl;
-  int likes;
-  final int comments;
-  final int reposts;
-  bool isLiked;
-
-  BlogPost({
-    required this.id,
-    required this.userName,
-    required this.userHandle,
-    required this.userAvatar,
-    required this.timeAgo,
-    required this.content,
-    this.imageUrl,
-    required this.likes,
-    required this.comments,
-    required this.reposts,
-    required this.isLiked,
-  });
 }

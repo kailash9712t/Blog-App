@@ -5,7 +5,7 @@ import 'package:blog/Pages/Auth/ProfileSetUp1/UI/profile_set_up1.dart';
 import 'package:blog/Pages/Auth/Register/Ui/register.dart';
 import 'package:blog/Pages/Home/UI/home.dart';
 import 'package:blog/Pages/Loading/UI/loading.dart';
-import 'package:blog/Pages/User/UI/User.dart';
+import 'package:blog/Pages/User/UI/user.dart';
 import 'package:go_router/go_router.dart';
 
 GoRouter route = GoRouter(
@@ -16,7 +16,13 @@ GoRouter route = GoRouter(
     GoRoute(
       path: "/userProfile",
       builder: (context, state) {
-        return UserProfilePage();
+        String? username = state.uri.queryParameters["username"];
+        String? isUserProfile = state.uri.queryParameters["isUserProfile"];
+
+        return UserProfilePage(
+          username: username!,
+          isUserProfile: bool.parse(isUserProfile!),
+        );
       },
     ),
     GoRoute(

@@ -58,7 +58,7 @@ class EmailVerificationModel extends ChangeNotifier {
           logs.i(user?.emailVerified);
 
           if (user!.emailVerified) {
-            context.go("/profileSetUp1?edit=false");
+          context.go("/profileSetUp1?editPage=false");
             resetState();
             return;
           }

@@ -1,6 +1,14 @@
+import 'dart:io';
+
+import 'package:blog/Models/BlogPost/post.dart';
+import 'package:blog/Pages/Home/State/home.dart';
+import 'package:blog/Utils/user_data_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:logger/web.dart';
+import 'package:provider/provider.dart';
 
 class BlogHomeScreen extends StatefulWidget {
   const BlogHomeScreen({super.key});
@@ -13,67 +21,21 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
     with TickerProviderStateMixin {
   final TextEditingController _postController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  bool _isPostExpanded = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
   final String currentUserName = "John Doe";
   final String currentUserHandle = "@johndoe";
-  final String currentUserAvatar =
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s";
+  String? currentUserAvatar;
 
-  List<BlogPost> posts = [
-    BlogPost(
-      id: "1",
-      userName: "Alice Johnson",
-      userHandle: "@alice_j",
-      userAvatar:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgWkA3X9cdGn3tggpvy_hnWe0QmRZW-DjwHw&s",
-      timeAgo: "2h",
-      content:
-          "Just finished reading an amazing article about Flutter development. The way widgets compose together is truly beautiful! 🚀",
-      imageUrl:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTZB3inQS_rlFHLkaHoCVN7aXs4ZiYNySBtg&s",
-      likes: 24,
-      comments: 5,
-      reposts: 12,
-      isLiked: false,
-    ),
-    BlogPost(
-      id: "2",
-      userName: "Tech Blogger",
-      userHandle: "@techblogger",
-      userAvatar:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTCwYtl1tFUwEbfdDLVzOmud-NVp1vrzzunyMdPsCIHWH6UWEbI_Ua-I_1GOvpDYFCDgpQ&usqp=CAU",
-      timeAgo: "4h",
-      content:
-          "The future of mobile development is here! What do you think about the latest updates in cross-platform frameworks?",
-      likes: 89,
-      comments: 23,
-      reposts: 34,
-      isLiked: true,
-    ),
-    BlogPost(
-      id: "3",
-      userName: "Sarah Wilson",
-      userHandle: "@sarah_codes",
-      userAvatar:
-          "https://blog.texasbar.com/files/2013/09/JessicaMangrum_smaller1.jpg",
-      timeAgo: "6h",
-      content:
-          "Building beautiful UIs has never been easier. Here's my latest project showcase!",
-      imageUrl:
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQTZB3inQS_rlFHLkaHoCVN7aXs4ZiYNySBtg&s",
-      likes: 156,
-      comments: 67,
-      reposts: 23,
-      isLiked: false,
-    ),
-  ];
+  Logger logs = Logger(
+      level: kReleaseMode ? Level.off : Level.debug,
+      printer: PrettyPrinter(methodCount: 1, colors: true));
 
   @override
   void initState() {
-    super.initState();
+    currentUserAvatar = UserDataProvider().userModel.profileUrl;
+
     _animationController = AnimationController(
       duration: Duration(milliseconds: 300),
       vsync: this,
@@ -82,6 +44,7 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
+    super.initState();
   }
 
   @override
@@ -90,55 +53,6 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
     _postController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _togglePostExpansion() {
-    setState(() {
-      _isPostExpanded = !_isPostExpanded;
-    });
-    HapticFeedback.lightImpact();
-  }
-
-  void _addPhoto() {
-    HapticFeedback.selectionClick();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Photo picker would open here'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _publishPost() {
-    if (_postController.text.trim().isNotEmpty) {
-      HapticFeedback.mediumImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Post published successfully!'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      _postController.clear();
-      setState(() {
-        _isPostExpanded = false;
-      });
-    }
-  }
-
-  void _toggleLike(String postId) {
-    setState(() {
-      final post = posts.firstWhere((p) => p.id == postId);
-      post.isLiked = !post.isLiked;
-      post.likes += post.isLiked ? 1 : -1;
-    });
-    HapticFeedback.lightImpact();
   }
 
   @override
@@ -156,9 +70,10 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
                 onRefresh: _refreshFeed,
                 child: ListView.builder(
                   controller: _scrollController,
-                  itemCount: posts.length,
+                  itemCount: context.read<HomePageModel>().posts.length,
                   itemBuilder: (context, index) {
-                    return _buildPostCard(posts[index]);
+                    return _buildPostCard(
+                        context.read<HomePageModel>().posts[index]);
                   },
                 ),
               ),
@@ -166,7 +81,6 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
           ],
         ),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
@@ -195,11 +109,43 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
           child: GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
-              context.push('/userProfile');
+              context.push(
+                  '/userProfile?username=${context.read<UserDataProvider>().userModel.username}&isUserProfile=true');
             },
             child: CircleAvatar(
-              radius: 18,
-              backgroundImage: NetworkImage(currentUserAvatar),
+              radius: 24,
+              backgroundColor: Colors.grey,
+              child: ClipOval(
+                child: Consumer<UserDataProvider>(
+                    builder: (context, instance, child) {
+                  logs.i("profile url : ${instance.userModel.profileUrl}");
+                  return Image.network(
+                    instance.userModel.profileUrl ?? '',
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, trace) {
+                      return Image.asset(
+                        "Assets/Image/default_user.png",
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return SizedBox(
+                        height: 5,
+                        width: 5,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
+                      );
+                    },
+                  );
+                }),
+              ),
             ),
           ),
         ),
@@ -229,80 +175,197 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundImage: NetworkImage(currentUserAvatar),
+                backgroundColor: Colors.grey,
+                child: ClipOval(child: Consumer<UserDataProvider>(
+                    builder: (context, instance, child) {
+                  return Image.network(
+                    instance.userModel.profileUrl ?? '',
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, trace) {
+                      return Image.asset(
+                        "Assets/Image/default_user.png",
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return CircularProgressIndicator();
+                    },
+                  );
+                })),
               ),
               SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextField(
-                      controller: _postController,
-                      decoration: InputDecoration(
-                        hintText: "What's happening?",
-                        border: InputBorder.none,
-                        hintStyle: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
+                    Consumer<HomePageModel>(
+                        builder: (context, instance, child) {
+                      return TextField(
+                        controller: _postController,
+                        decoration: InputDecoration(
+                          hintText: "What's happening?",
+                          border: InputBorder.none,
+                          hintStyle: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                      ),
-                      style: TextStyle(fontSize: 18),
-                      maxLines: _isPostExpanded ? 6 : 3,
-                      onTap: _togglePostExpansion,
-                    ),
+                        style: TextStyle(fontSize: 18),
+                        maxLines: instance.isPostExtend ? 6 : 3,
+                        onTap: instance.togglePostExpansion,
+                      );
+                    })
                   ],
                 ),
               ),
             ],
           ),
-          if (_isPostExpanded) ...[
-            SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    _buildActionButton(
-                      icon: Icons.photo_library,
-                      color: Colors.blue,
-                      onTap: _addPhoto,
-                    ),
-                    SizedBox(width: 16),
-                    _buildActionButton(
-                      icon: Icons.emoji_emotions,
-                      color: Colors.orange,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                      },
-                    ),
-                    SizedBox(width: 16),
-                    _buildActionButton(
-                      icon: Icons.location_on,
-                      color: Colors.green,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                      },
-                    ),
-                  ],
-                ),
-                ElevatedButton(
-                  onPressed: _publishPost,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          Consumer<HomePageModel>(builder: (context, instance, child) {
+            if (!instance.isPostExtend) return SizedBox.shrink();
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LayoutBuilder(builder: (context, constraints) {
+                    return SizedBox(
+                        height: 70,
+                        width: constraints.maxHeight,
+                        child: Consumer<HomePageModel>(
+                            builder: (context, instance, child) {
+                          return ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: instance.imageInList.length,
+                            itemBuilder: (context, index) {
+                              return Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                child: SizedBox(
+                                  height: 40,
+                                  width: 70,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Stack(
+                                      children: [
+                                        Positioned.fill(
+                                          child: Image.file(
+                                            instance.imageInList[index],
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          top: 2,
+                                          right: 2,
+                                          child: Container(
+                                            width: 27,
+                                            height: 27,
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.black.withOpacity(0.5),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                logs.i(index);
+                                                context
+                                                    .read<HomePageModel>()
+                                                    .removeImage(index);
+                                              },
+                                              child: Icon(
+                                                Icons.close,
+                                                color: Colors.red,
+                                                size: 18,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }));
+                  }),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          _buildActionButton(
+                            icon: Icons.photo_library,
+                            color: Colors.blue,
+                            onTap: () {
+                              context
+                                  .read<HomePageModel>()
+                                  .pickImageFromSource();
+                            },
+                          ),
+                          SizedBox(width: 16),
+                          _buildActionButton(
+                            icon: Icons.emoji_emotions,
+                            color: Colors.orange,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                            },
+                          ),
+                          SizedBox(width: 16),
+                          _buildActionButton(
+                            icon: Icons.location_on,
+                            color: Colors.green,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                            },
+                          ),
+                        ],
+                      ),
+                      Selector<HomePageModel, Map<String, UploadStatus>>(
+                          builder: (_, values, __) {
+                            return ElevatedButton(
+                                onPressed: values["uploadPost"] ==
+                                        UploadStatus.notStart
+                                    ? () {
+                                        context
+                                            .read<HomePageModel>()
+                                            .publishPost(
+                                                _postController.text, context);
+
+                                        _postController.clear();
+                                      }
+                                    : () {},
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                ),
+                                child: values["uploadPost"] ==
+                                        UploadStatus.notStart
+                                    ? Text(
+                                        'Post',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w600),
+                                      )
+                                    : SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: const CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      ));
+                          },
+                          selector: (_, model) => model.values)
+                    ],
                   ),
-                  child: Text(
-                    'Post',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ],
+                ]);
+          })
         ],
       ),
     );
@@ -344,69 +407,108 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: NetworkImage(post.userAvatar),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          GestureDetector(
+            onTap: () {
+              print(post.userHandle);
+              context.push(
+                  "/userProfile?username=${post.userHandle}&isUserProfile=${post.userHandle == context.read<UserDataProvider>().userModel.username ? true : false}");
+            },
+            child: Column(
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          post.userName,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.grey,
+                      child: ClipOval(
+                        child: Image.network(
+                          post.userAvatar ?? "",
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, trace) {
+                            return Image.asset(
+                              "Assets/Image/default_user.png",
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                            );
+                          },
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return CircularProgressIndicator();
+                          },
                         ),
-                        SizedBox(width: 4),
-                        Text(
-                          post.userHandle,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                post.userName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                post.userHandle ?? "user",
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                '• ${post.timeAgo}',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          '• ${post.timeAgo}',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.more_vert, color: Colors.grey[600]),
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                      },
                     ),
                   ],
                 ),
-              ),
-              IconButton(
-                icon: Icon(Icons.more_vert, color: Colors.grey[600]),
-                onPressed: () {
-                  HapticFeedback.selectionClick();
-                },
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-          Text(post.content, style: TextStyle(fontSize: 16, height: 1.4)),
-          if (post.imageUrl != null) ...[
-            SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                post.imageUrl!,
-                width: double.infinity,
-                height: 200,
-                fit: BoxFit.cover,
-              ),
+                SizedBox(height: 12),
+                Text(post.content, style: TextStyle(fontSize: 16, height: 1.4)),
+                if (post.profileUrl != null) ...[
+                  SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      post.profileUrl ?? '',
+                      width: double.infinity,
+                      height: 200,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Image.asset(
+                          'Assets/Image/image_placeholder.png',
+                          width: double.infinity,
+                          height: 200,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    ),
+                  )
+                ],
+              ],
             ),
-          ],
+          ),
           SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -431,7 +533,7 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
                 icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
                 count: post.likes,
                 color: post.isLiked ? Colors.red : Colors.grey[600]!,
-                onTap: () => _toggleLike(post.id),
+                onTap: () => context.read<HomePageModel>().toggleLike(post.id),
               ),
               _buildPostAction(
                 icon: Icons.share,
@@ -485,44 +587,8 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
     );
   }
 
-  Widget _buildFloatingActionButton() {
-    return FloatingActionButton(
-      onPressed: _togglePostExpansion,
-      backgroundColor: Colors.blue,
-      child: Icon(Icons.add, color: Colors.white),
-    );
-  }
-
   Future<void> _refreshFeed() async {
     await Future.delayed(Duration(seconds: 1));
     HapticFeedback.lightImpact();
   }
-}
-
-class BlogPost {
-  final String id;
-  final String userName;
-  final String userHandle;
-  final String userAvatar;
-  final String timeAgo;
-  final String content;
-  final String? imageUrl;
-  int likes;
-  final int comments;
-  final int reposts;
-  bool isLiked;
-
-  BlogPost({
-    required this.id,
-    required this.userName,
-    required this.userHandle,
-    required this.userAvatar,
-    required this.timeAgo,
-    required this.content,
-    this.imageUrl,
-    required this.likes,
-    required this.comments,
-    required this.reposts,
-    required this.isLiked,
-  });
 }

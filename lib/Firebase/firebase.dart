@@ -59,7 +59,6 @@ class FirebaseOperation {
         status = 1;
         message = "email not verify";
       }
-      
     } on FirebaseException catch (e) {
       status = 2;
       message = e.code;
@@ -170,5 +169,100 @@ class FireStoreOperation {
     }
 
     return {"status": false, "message": "username already used!"};
+  }
+
+  Future<Map<String, dynamic>?> getUserData(String username) async {
+    try {
+      DocumentReference reference = instance.collection("Users").doc(username);
+      DocumentSnapshot snapshot = await reference.get();
+
+      if (!snapshot.exists) return null;
+
+      Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+      return data;
+    } catch (error) {
+      logs.e("$fileName.getUserData ${error.toString()}");
+    }
+    return null;
+  }
+}
+
+class HandlePost {
+  final FirebaseFirestore instance = FirebaseFirestore.instance;
+
+  Future<bool> storePost(Map<String, dynamic> data) async {
+    try {
+      DocumentReference reference = instance
+          .collection("Users")
+          .doc(data["userName"])
+          .collection("Tweet")
+          .doc();
+
+      await reference.set(data);
+
+      return true;
+    } catch (error) {
+      logs.e("$fileName.storePost ${error.toString()}");
+    }
+    return false;
+  }
+
+  Future<List<Map<String, dynamic>>?> loadPost(String username) async {
+    try {
+      logs.i("here task to execute $username");
+      final snapshot = await instance
+          .collection("Users")
+          .doc(username)
+          .collection("Tweet")
+          .orderBy('timeAgo', descending: true)
+          .get();
+
+      logs.i("snapshot : - ${snapshot.docs.length}");
+
+      List<Map<String, dynamic>> data =
+          snapshot.docs.map((doc) => doc.data()).toList();
+
+      return data;
+    } catch (error) {
+      logs.e("$fileName.loadPost ${error.toString()}");
+    }
+
+    return null;
+  }
+}
+
+class Relation {
+  FirebaseFirestore instance = FirebaseFirestore.instance;
+  Future<bool> addFriend(String user, Map<String, dynamic> userData) async {
+    try {
+      DocumentReference reference = instance
+          .collection("Users")
+          .doc(user)
+          .collection("Followers")
+          .doc(userData["username"]);
+
+      DocumentReference reference1 = instance
+          .collection("Users")
+          .doc(userData["username"])
+          .collection("Following")
+          .doc(user);
+
+      WriteBatch batch = instance.batch();
+
+      batch.set(reference, userData);
+      batch.set(reference1, {
+        "username": user,
+        "displayName": userData["displayName"],
+        "profileUrl": userData["profileUrl"]
+      });
+
+      await batch.commit();
+
+      return true;
+    } catch (error) {
+      logs.e("$fileName.addFriend ${error.toString()}");
+    }
+
+    return false;
   }
 }

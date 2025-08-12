@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:blog/Config/env.dart';
 import 'package:blog/Firebase/firebase.dart';
-import 'package:blog/Utils/uuid.dart';
 import 'package:cloudinary_api/uploader/cloudinary_uploader.dart';
 import 'package:cloudinary_url_gen/cloudinary.dart';
 import 'package:flutter/foundation.dart';

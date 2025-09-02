@@ -1,439 +1,425 @@
-// ignore_for_file: non_constant_identifier_names
-
 import 'package:blog/Models/BlogPost/post.dart';
 import 'package:blog/Models/Hive_Model/UserData/user.dart';
 import 'package:blog/Models/User/user_profile.dart';
 import 'package:blog/Pages/User/State/user.dart';
 import 'package:blog/Utils/date_and_time.dart';
-import 'package:blog/Utils/user_data_provider.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:logger/web.dart';
 import 'package:provider/provider.dart';
 
-class UserProfilePage extends StatefulWidget {
-  final bool isUserProfile;
-  final String username;
-  const UserProfilePage(
-      {super.key, required this.isUserProfile, required this.username});
+class TweetDetailPage extends StatefulWidget {
+  BlogPost post;
+  TweetDetailPage({super.key, required this.post});
 
   @override
-  _UserProfilePageState createState() => _UserProfilePageState();
+  _TweetDetailPageState createState() => _TweetDetailPageState();
 }
 
-class _UserProfilePageState extends State<UserProfilePage>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-
-  Logger logs = Logger(
-    level: kReleaseMode ? Level.off : Level.debug,
-    printer: PrettyPrinter(methodCount: 1, colors: true),
-  );
-
-  @override
-  void initState() {
-    _tabController = TabController(length: 3, vsync: this);
-    _animationController = AnimationController(
-      duration: Duration(milliseconds: 600),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
-    );
-
-    _animationController.forward();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      mainTask();
-      context.read<UserPageModel>().isFollowing = true;
-    });
-    super.initState();
-  }
-
-  void mainTask() async {
-    await context.read<UserPageModel>().loadLikedPost();
-
-    if (!mounted) return;
-
-    await context
-        .read<UserPageModel>()
-        .initialTask(context, widget.isUserProfile, widget.username);
-
-    if (!mounted) return;
-
-    context.read<UserPageModel>().loadPost(context);
-  }
-
-  @override
-  void didChangeDependencies() async {
-    super.didChangeDependencies();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _animationController.dispose();
-    super.dispose();
-  }
+class _TweetDetailPageState extends State<TweetDetailPage> {
+  bool isLiked = true;
+  int likeCount = 1;
+  TextEditingController commentController = TextEditingController();
+  List<Comment> comments = [
+    Comment(
+      username: "john_dev",
+      handle: "@johndev",
+      comment: "Nice room design! The green blocks look really cool 👍",
+      timeAgo: "2h",
+      avatar: "J",
+    ),
+    Comment(
+      username: "sarah_ui",
+      handle: "@sarahui",
+      comment: "Love the minimalist style. What software did you use for this?",
+      timeAgo: "1h",
+      avatar: "S",
+    ),
+    Comment(
+      username: "mike_designer",
+      handle: "@mikedesign",
+      comment: "The lighting and shadows look realistic. Great work!",
+      timeAgo: "45m",
+      avatar: "M",
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              _buildSliverAppBar(),
-              _buildSliverProfileHeader(),
-              _buildSliverTabBar(),
-            ];
-          },
-          body: TabBarView(
-            controller: _tabController,
-            children: [_buildPostsTab(), _buildMediaTab(), _buildLikesTab()],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      elevation: 0,
       backgroundColor: Colors.white,
-      pinned: true,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Selector<UserPageModel, String?>(
-            builder: (_, displayName, __) {
-              return Text(
-                displayName ?? "user",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              );
-            },
-            selector: (_, model) => model.userModel.displayName,
-          ),
-          Selector<UserPageModel, int>(
-            builder: (_, posts, __) {
-              return Text(
-                '$posts posts',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              );
-            },
-            selector: (_, model) => model.userModel.posts,
-          ),
-        ],
-      ),
-      actions: [
-        IconButton(
-          icon: Icon(Icons.more_vert, color: Colors.black),
-          onPressed: () {
-            HapticFeedback.selectionClick();
-            _showOptionsBottomSheet();
-          },
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
         ),
-      ],
-    );
-  }
-
-  Widget _buildSliverProfileHeader() {
-    UserModel user = context.read<UserDataProvider>().userModel;
-    return SliverToBoxAdapter(
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: Container(
-          color: Colors.white,
-          child: Column(
-            children: [
-              Selector<UserProfileState, String?>(
-                  builder: (_, profile_url, __) {
-                    return SizedBox(
-                      height: 200,
-                      width: double.infinity,
-                      child: Image.network(
-                        profile_url ?? "",
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Image.asset(
-                              "Assets/Image/image_failed_to_load.png",
-                              height: 60,
-                              width: 60,
-                              fit: BoxFit.contain,
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                  selector: (_, model) => model.model.profileUrl),
-              Container(
+        title: Text(
+          'Post',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Main Tweet Card
+            Container(
+              width: double.infinity,
+              color: Colors.white,
+              child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // User Info
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Transform.translate(
-                          offset: Offset(0, -40),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 4),
-                            ),
-                            child: CircleAvatar(
-                              radius: 50,
-                              backgroundColor: Colors.grey,
-                              child: ClipOval(
-                                child: Selector<UserProfileState, String?>(
-                                    builder: (_, profile_url, __) {
-                                      return Image.network(
-                                        profile_url ?? '',
-                                        width: 100,
-                                        height: 100,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, trace) {
-                                          return Image.asset(
-                                            "Assets/Image/default_user.png",
-                                            width: 48,
-                                            height: 48,
-                                            fit: BoxFit.cover,
-                                          );
-                                        },
-                                        loadingBuilder:
-                                            (context, child, progress) {
-                                          if (progress == null) return child;
-                                          return CircularProgressIndicator();
-                                        },
-                                      );
-                                    },
-                                    selector: (_, model) =>
-                                        model.model.coverUrl),
-                              ),
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Colors.grey,
+                          child: ClipOval(
+                            child: Image.network(
+                              widget.post.profileUrl ?? '',
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, trace) {
+                                return Image.asset(
+                                  "Assets/Image/default_user.png",
+                                  width: 48,
+                                  height: 48,
+                                  fit: BoxFit.cover,
+                                );
+                              },
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return CircularProgressIndicator();
+                              },
                             ),
                           ),
                         ),
-                        Spacer(),
-                        if (widget.isUserProfile)
-                          _buildActionButton(
-                            text: 'Edit Profile',
-                            onPressed: () {
-                              HapticFeedback.selectionClick();
-                              context.push("/profileSetUp1?editPage=true");
-                            },
-                            isPrimary: false,
-                          )
-                        else
-                          Row(
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildActionButton(
-                                text: 'Message',
-                                onPressed: () {
-                                  HapticFeedback.selectionClick();
-                                },
-                                isPrimary: false,
+                              Text(
+                                '${widget.post.userHandle}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
-                              SizedBox(width: 8),
-                              Selector<UserPageModel, bool>(
-                                  builder: (_, isFollow, __) {
-                                    return _buildActionButton(
-                                      text: isFollow ? 'Following' : 'Follow',
-                                      onPressed: () {
-                                        context
-                                            .read<UserPageModel>()
-                                            .follow(context, {});
-                                      },
-                                      isPrimary: !isFollow,
-                                    );
-                                  },
-                                  selector: (__, model) => model.isFollowing),
+                              Text(
+                                '${widget.post.userName} • ${DateAndTime().timeDifference(DateAndTime().stringTimeStampToDateTime(widget.post.timeAgo))}',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
                             ],
                           ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.more_vert, color: Colors.grey[600]),
+                          onPressed: () {},
+                        ),
                       ],
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Selector<UserProfileState, String?>(
-                            builder: (_, displayName, __) {
-                              return Text(
-                                displayName ?? "Failed",
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              );
-                            },
-                            selector: (_, model) => model.model.displayName),
-                        if (user.isVerify) ...[
-                          SizedBox(width: 4),
-                          Icon(Icons.verified, color: Colors.blue, size: 20),
-                        ],
-                      ],
-                    ),
-                    SizedBox(height: 4),
-                    Selector<UserProfileState, String?>(
-                        builder: (_, username, __) {
-                          return Text(
-                            username ?? "Failed",
-                            style: TextStyle(
-                                fontSize: 16, color: Colors.grey[600]),
-                          );
-                        },
-                        selector: (_, model) => model.model.username),
-                    SizedBox(height: 12),
-                    Selector<UserProfileState, String?>(
-                      builder: (_, bio, __) {
-                        return Text(
-                          bio ?? "Failed",
-                          style: TextStyle(fontSize: 16, height: 1.4),
-                        );
-                      },
-                      selector: (_, model) => model.model.bio,
                     ),
                     SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          color: Colors.grey[600],
-                          size: 16,
-                        ),
-                        SizedBox(width: 4),
-                        Selector<UserProfileState, String?>(
-                          builder: (_, location, __) {
-                            return Text(
-                              location ?? "Failed",
-                              style: TextStyle(color: Colors.grey[600]),
-                            );
-                          },
-                          selector: (_, model) => model.model.location,
-                        ),
-                        SizedBox(width: 16),
-                        Icon(Icons.link, color: Colors.grey[600], size: 16),
-                        SizedBox(width: 4),
-                        Selector<UserProfileState, String?>(
-                          builder: (_, website, __) {
-                            return Text(
-                              website ?? "kailash.dev",
-                              style: TextStyle(color: Colors.blue),
-                            );
-                          },
-                          selector: (_, model) => model.model.website,
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          color: Colors.grey[600],
-                          size: 16,
-                        ),
-                        SizedBox(width: 4),
-                        Selector<UserProfileState, String?>(
-                          builder: (_, joiningDate, __) {
-                            return Text(
-                              'Joined $joiningDate',
-                              style: TextStyle(color: Colors.grey[600]),
-                            );
-                          },
-                          selector: (_, model) => model.model.joiningDate,
-                        ),
-                      ],
+
+                    // Tweet Text
+                    Text(
+                      'hi my name is kailash',
+                      style: TextStyle(
+                        fontSize: 16,
+                        height: 1.4,
+                      ),
                     ),
                     SizedBox(height: 16),
+
+                    // Images Grid
+                    _buildPhotoLayout(widget.post.contentImage),
+                    SizedBox(height: 16),
+
+                    // Engagement Stats
                     Row(
                       children: [
-                        Selector<UserProfileState, int>(
-                          builder: (_, following, __) {
-                            return _buildStatItem('Following', following);
-                          },
-                          selector: (_, model) => model.model.following,
+                        Text(
+                          '12:34 PM • Oct 15, 2024',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Divider(color: Colors.grey[200]),
+                    SizedBox(height: 12),
+
+                    // Stats Row
+                    Row(
+                      children: [
+                        Text(
+                          '$likeCount',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Like',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
                         ),
                         SizedBox(width: 20),
-                        Selector<UserProfileState, int>(
-                          builder: (_, followers, __) {
-                            return _buildStatItem('Following', followers);
+                        Text(
+                          '${comments.length}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Text(
+                          'Comments',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Divider(color: Colors.grey[200]),
+
+                    // Action Buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.chat_bubble_outline,
+                            color: Colors.grey[600],
+                          ),
+                          onPressed: () {},
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.repeat,
+                            color: Colors.grey[600],
+                          ),
+                          onPressed: () {},
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            isLiked ? Icons.favorite : Icons.favorite_border,
+                            color: isLiked ? Colors.red : Colors.grey[600],
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              isLiked = !isLiked;
+                              likeCount =
+                                  isLiked ? likeCount + 1 : likeCount - 1;
+                            });
                           },
-                          selector: (_, model) => model.model.followers,
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.share_outlined,
+                            color: Colors.grey[600],
+                          ),
+                          onPressed: () {},
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required String text,
-    required VoidCallback onPressed,
-    required bool isPrimary,
-  }) {
-    return SizedBox(
-      height: 36,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: isPrimary ? Colors.blue : Colors.transparent,
-          foregroundColor: isPrimary ? Colors.white : Colors.blue,
-          elevation: 0,
-          side: BorderSide(color: Colors.blue),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: 16),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, int count) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-      },
-      child: RichText(
-        text: TextSpan(
-          style: TextStyle(color: Colors.black),
-          children: [
-            TextSpan(
-              text: count.toString(),
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            TextSpan(
-              text: ' $label',
-              style: TextStyle(color: Colors.grey[600], fontSize: 16),
+
+            Container(
+              height: 8,
+              color: Colors.grey[100],
+            ),
+
+            // Comments Section
+            Container(
+              color: Colors.white,
+              child: Column(
+                children: [
+                  // Add Comment
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.blue[400],
+                          radius: 20,
+                          child:
+                              Text('U', style: TextStyle(color: Colors.white)),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: commentController,
+                            decoration: InputDecoration(
+                              hintText: 'Tweet your reply',
+                              border: InputBorder.none,
+                              hintStyle: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            if (commentController.text.isNotEmpty) {
+                              setState(() {
+                                comments.insert(
+                                    0,
+                                    Comment(
+                                      username: "you",
+                                      handle: "@you",
+                                      comment: commentController.text,
+                                      timeAgo: "now",
+                                      avatar: "U",
+                                    ));
+                                commentController.clear();
+                              });
+                            }
+                          },
+                          child: Text(
+                            'Reply',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(color: Colors.grey[200], height: 1),
+
+                  // Comments List
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: comments.length,
+                    itemBuilder: (context, index) {
+                      final comment = comments[index];
+                      return Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey[200]!,
+                              width: 0.5,
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: _getAvatarColor(comment.avatar),
+                              radius: 20,
+                              child: Text(
+                                comment.avatar,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        comment.username,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        comment.handle,
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        '• ${comment.timeAgo}',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    comment.comment,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: BoxConstraints(),
+                                        icon: Icon(
+                                          Icons.chat_bubble_outline,
+                                          size: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                        onPressed: () {},
+                                      ),
+                                      SizedBox(width: 20),
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: BoxConstraints(),
+                                        icon: Icon(
+                                          Icons.favorite_border,
+                                          size: 16,
+                                          color: Colors.grey[600],
+                                        ),
+                                        onPressed: () {},
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -441,83 +427,11 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
-  Widget _buildSliverTabBar() {
-    return SliverPersistentHeader(
-      pinned: true,
-      delegate: _SliverTabBarDelegate(
-        TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.blue,
-          labelColor: Colors.blue,
-          unselectedLabelColor: Colors.grey[600],
-          labelStyle: TextStyle(fontWeight: FontWeight.w600),
-          tabs: [Tab(text: 'Posts'), Tab(text: 'Media'), Tab(text: 'Likes')],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPostsTab() {
-    return Consumer<UserPageModel>(builder: (context, instance, child) {
-      List<BlogPost> personalPost = instance.personalPost.values.toList();
-      return ListView.builder(
-          itemCount: personalPost.length,
-          itemBuilder: (context, index) {
-            return _buildPostCard(personalPost[index]);
-          });
-    });
-  }
-
-  Widget _buildMediaTab() {
-    return Selector<UserPageModel, List<String>>(
-        builder: (_, media_list, __) {
-          return GridView.builder(
-            padding: EdgeInsets.all(16),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-            ),
-            itemCount: media_list.length,
-            itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    media_list[index],
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              );
-            },
-          );
-        },
-        selector: (_, model) => model.mediaTab);
-  }
-
-  Widget _buildLikesTab() {
-    return Consumer<UserPageModel>(builder: (context, instance, child) {
-      List<BlogPost> likedPost = [];
-
-      return ListView.builder(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: likedPost.length,
-        itemBuilder: (context, index) {
-          return _buildPostCard(likedPost[index]);
-        },
-      );
-    });
-  }
-
   Widget _buildPostCard(BlogPost post) {
     UserModel userData = context.read<UserProfileState>().model;
     return GestureDetector(
       onTap: () {
-        context.push("/posts", extra: post);
-        logs.i("Here is profileUrl : - ${post.profileUrl}");
+        context.push("/posts");
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 16),
@@ -1009,72 +923,60 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
-  void _showOptionsBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.share),
-                title: Text('Share Profile'),
-                onTap: () {
-                  Navigator.pop(context);
-                  HapticFeedback.selectionClick();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.block),
-                title: Text('Block User'),
-                onTap: () {
-                  Navigator.pop(context);
-                  HapticFeedback.selectionClick();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.report),
-                title: Text('Report User'),
-                onTap: () {
-                  Navigator.pop(context);
-                  HapticFeedback.selectionClick();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  Color _getAvatarColor(String avatar) {
+    switch (avatar) {
+      case 'J':
+        return Colors.purple;
+      case 'S':
+        return Colors.pink;
+      case 'M':
+        return Colors.orange;
+      case 'U':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
   }
 }
 
-class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar _tabBar;
+class Comment {
+  final String username;
+  final String handle;
+  final String comment;
+  final String timeAgo;
+  final String avatar;
 
-  _SliverTabBarDelegate(this._tabBar);
+  Comment({
+    required this.username,
+    required this.handle,
+    required this.comment,
+    required this.timeAgo,
+    required this.avatar,
+  });
+}
 
+class CheckerPainter extends CustomPainter {
   @override
-  double get minExtent => _tabBar.preferredSize.height;
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint();
+    final squareSize = 8.0;
 
-  @override
-  double get maxExtent => _tabBar.preferredSize.height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return Container(color: Colors.white, child: _tabBar);
+    for (int i = 0; i < (size.width / squareSize).ceil(); i++) {
+      for (int j = 0; j < (size.height / squareSize).ceil(); j++) {
+        paint.color = (i + j) % 2 == 0 ? Colors.white : Colors.black;
+        canvas.drawRect(
+          Rect.fromLTWH(
+            i * squareSize,
+            j * squareSize,
+            squareSize,
+            squareSize,
+          ),
+          paint,
+        );
+      }
+    }
   }
 
   @override
-  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) {
-    return false;
-  }
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

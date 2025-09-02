@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:blog/Firebase/firebase.dart';
 import 'package:blog/Models/BlogPost/follow.dart';
 import 'package:blog/Models/BlogPost/post.dart';
 import 'package:blog/Models/Hive_Model/UserData/user.dart';
+import 'package:blog/Models/User/user_profile.dart';
 import 'package:blog/Utils/date_and_time.dart';
 import 'package:blog/Utils/user_data_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -18,7 +21,9 @@ class UserPageModel extends ChangeNotifier {
   UserModel userModel = UserModel();
   bool isFollowing = false;
 
-  List<BlogPost> personalPost = [];
+  Map<String, BlogPost> personalPost = {};
+  List<dynamic> likedPost = [];
+
   List<Follow> follower = [];
   List<Follow> following = [];
 
@@ -30,20 +35,16 @@ class UserPageModel extends ChangeNotifier {
       BuildContext context, bool userOwnProfile, String username) async {
     try {
       if (userOwnProfile) {
-        userModel = context.read<UserDataProvider>().userModel;
+        userModel = context.read<UserProfileState>().model;
       } else {
         Map<String, dynamic>? data =
             await FireStoreOperation().getUserData(username);
 
         if (data == null) throw Exception("no user present");
 
-        print("problem here :");
-
         Timestamp stamp = data["joiningDate"] as Timestamp;
 
         DateTime time = stamp.toDate();
-
-        print("check out ");
 
         userModel = UserModel(
             username: data["username"],
@@ -63,7 +64,7 @@ class UserPageModel extends ChangeNotifier {
 
   Future<void> loadPost(BuildContext context) async {
     try {
-      personalPost = [];
+      personalPost = {};
 
       String? username = userModel.username;
 
@@ -72,11 +73,11 @@ class UserPageModel extends ChangeNotifier {
       List<Map<String, dynamic>>? listOfUser =
           await HandlePost().loadPost(username);
 
+      logs.i("here are their list : $listOfUser");
+
       if (listOfUser == null) return;
 
       handleList(listOfUser);
-
-      display();
 
       handleRender();
     } catch (error) {
@@ -96,22 +97,49 @@ class UserPageModel extends ChangeNotifier {
 
   void convertMapToClass(Map<String, dynamic> data) {
     BlogPost post = BlogPost.fromJson(data);
-    personalPost.add(post);
-  }
-
-  void display() {
-    for (int i = 0; i < personalPost.length; i++) {
-      logs.i(personalPost[i]);
+    if (hashListOfLikedPost.contains(post.id)) {
+      logs.i("here post id ${post.id}");
+      post.isLiked = true;
     }
+    personalPost[post.id] = post;
   }
 
-  void toggleLike(String postId) {
-    BlogPost post = personalPost.firstWhere((p) => p.id == postId);
-    BlogPost likeUpdated = post.copyWith(
-        isLiked: !post.isLiked, likes: post.likes - (post.isLiked ? 1 : -1));
-    post = likeUpdated;
+  Timer? userSpamLikes;
+
+  void toggleLike(String? username, String postId, BuildContext context) async {
+    logs.i("clicked on like id : - $postId");
+
+    BlogPost? post = personalPost[postId];
+
+    if (post == null) {
+      throw Exception("post not found");
+    }
+
+    logs.i("clicked on like id : - ${post.likes} ${post.isLiked}");
+
+    post.likes = post.isLiked ? post.likes - 1 : post.likes + 1;
+    post.isLiked = !post.isLiked;
+    logs.i("clicked on like id : - ${post.likes} ${post.isLiked}");
     notifyListeners();
     HapticFeedback.lightImpact();
+
+    if (userSpamLikes != null) {
+      userSpamLikes!.cancel();
+      userSpamLikes = null;
+      return;
+    }
+
+    if (username == null) {
+      logs.i("username is null");
+      return;
+    }
+
+    userSpamLikes = Timer(Duration(seconds: 3), () async {
+      bool response =
+          await HandlePost().addLikes(username, postId, post.isLiked);
+      userSpamLikes = null;
+      if (!response) throw Exception("user liked request failed");
+    });
   }
 
   Future<void> follow(BuildContext context, Map<String, dynamic> data) async {
@@ -131,13 +159,37 @@ class UserPageModel extends ChangeNotifier {
     }
   }
 
+  Future<void> loadLikedPost() async {
+    try {
+      likedPost = await HandlePost().getLikedPost();
+      hashSetOperation();
+    } catch (error) {
+      logs.i("$filename.loadLikedPost ${error.toString()}");
+    }
+    notifyListeners();
+  }
+
   void handleRender() {
     bool firstFrameRender = WidgetsBinding.instance.firstFrameRasterized;
     bool inBuildPhase = WidgetsBinding.instance.schedulerPhase ==
         SchedulerPhase.persistentCallbacks;
 
-    print("To FirstFrameRender : - $firstFrameRender");
-
     if (firstFrameRender && !inBuildPhase) notifyListeners();
+  }
+
+  Set<String> hashListOfLikedPost = {};
+
+  void hashSetOperation() async {
+    for (int i = 0; i < likedPost.length; i++) {
+      hashListOfLikedPost.add(likedPost[i]["postId"]);
+    }
+  }
+
+  List<String> mediaTab = [];
+
+  void retrivePhotosfromMediaTab() async {
+    personalPost.forEach((key, value) {
+      mediaTab.addAll(value.contentImage);
+    });
   }
 }

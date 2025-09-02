@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class DateAndTime {
   String? monthAndYear(DateTime? time) {
     if (time == null) return null;

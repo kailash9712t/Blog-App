@@ -1,9 +1,8 @@
 import 'package:blog/Firebase/firebase.dart';
-import 'package:blog/Models/Hive_Model/UserData/user.dart';
+import 'package:blog/Models/User/user_profile.dart';
 import 'package:blog/Utils/date_and_time.dart';
 import 'package:blog/Utils/show_dialoag.dart';
 import 'package:blog/Utils/snackbar.dart';
-import 'package:blog/Utils/user_data_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -83,23 +82,29 @@ class LoginPageModel extends ChangeNotifier {
 
     if (!context.mounted) return;
 
-    UserModel user = context.read<UserDataProvider>().userModel;
 
-    print(userData);
+    logs.i("user data retrive from firebase $userData");
 
-    user.username = userData["username"];
-    user.displayName = userData["displayName"];
-    user.bio = userData["bio"];
-    user.coverUrl = userData["coverImageUrl"];
-    user.profileUrl = userData["profileImageUrl"];
-    user.email = userData["email"];
     Timestamp time = userData["joiningDate"];
     DateTime again = time.toDate();
-    user.joiningDate = DateAndTime().monthAndYear(again);
-    user.location = userData["location"];
+
+    context.read<UserProfileState>().intializeData(
+        username: userData["username"],
+        displayName: userData["displayName"],
+        bio: userData["bio"],
+        cover_url: userData["coverImageUrl"],
+        profie_url: userData["profileImageUrl"],
+        email: userData["email"],
+        joiningDate: DateAndTime().monthAndYear(again),
+        location: userData["location"],
+        followers: userData["followers"] as int,
+        following: userData["following"] as int,
+        completeProfile: userData["isProfileCompleted"] as bool);
+
+    print(context.read<UserProfileState>().toJson());
 
     if (!context.mounted) return;
 
-    await context.read<UserDataProvider>().storeLocally();
+    await context.read<UserProfileState>().storeLocally();
   }
 }

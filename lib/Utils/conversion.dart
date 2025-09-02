@@ -4,7 +4,6 @@ class Conversion {
 
 class _DynamicList {
   List<String> toStringList(List<dynamic> list) {
-
     List<String> data = [];
 
     list.map((e) {
@@ -13,4 +12,12 @@ class _DynamicList {
 
     return data;
   }
+
+  // List<Object> toObjectList(List<Object> list) {
+  //   List<Object> data = [];
+
+  //   list.map((e) {
+  //     data.add(e);
+  //   });
+  // }
 }

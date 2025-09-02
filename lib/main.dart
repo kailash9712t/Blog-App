@@ -1,4 +1,5 @@
 import 'package:blog/Models/Hive_Model/UserData/user.dart';
+import 'package:blog/Models/User/user_profile.dart';
 import 'package:blog/Pages/Auth/EmailVerification/State/email_verification.dart';
 import 'package:blog/Pages/Auth/Login/State/login.dart';
 import 'package:blog/Pages/Auth/ProfileSetUp/State/profile_set.dart';
@@ -44,7 +45,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => ProfileSetUp1()),
         ChangeNotifierProvider(create: (context) => EmailVerificationModel()),
         ChangeNotifierProvider(create: (context) => UserPageModel()),
-        ChangeNotifierProvider(create: (context) => HomePageModel())
+        ChangeNotifierProvider(create: (context) => HomePageModel()),
+        ChangeNotifierProvider(create: (context) => UserProfileState())
       ],
       child: MaterialApp.router(
         title: 'Flutter Demo',

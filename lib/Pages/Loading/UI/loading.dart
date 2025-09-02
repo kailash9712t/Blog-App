@@ -1,4 +1,4 @@
-import 'package:blog/Utils/user_data_provider.dart';
+import 'package:blog/Models/User/user_profile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -33,9 +33,11 @@ class _LoadingPageState extends State<LoadingPage> {
     User? user = auth.currentUser;
 
     if (user == null || !user.emailVerified) {
+      logs.i("user not verify");
       context.go("/login");
     } else {
-      await context.read<UserDataProvider>().loadDataFromLocalDatabase();
+      logs.i("user verify");
+      await context.read<UserProfileState>().loadData();
       if (!mounted) return;
       context.go("/home");
     }

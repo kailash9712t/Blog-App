@@ -196,7 +196,7 @@ class HandlePost {
           .collection("Users")
           .doc(data["userName"])
           .collection("Tweet")
-          .doc();
+          .doc(data["postID"]);
 
       await reference.set(data);
 
@@ -228,6 +228,51 @@ class HandlePost {
     }
 
     return null;
+  }
+
+  Future<bool> addLikes(String username, String postId, bool isLiked) async {
+    try {
+      await instance.runTransaction((transection) async {
+        final likedPost = instance.collection("LikedPost").doc(username);
+        final users = instance
+            .collection("Users")
+            .doc(username)
+            .collection("Tweet")
+            .doc(postId);
+
+        transection.set(
+            likedPost,
+            {
+              "LikedPost": isLiked
+                  ? FieldValue.arrayUnion([
+                      {"username": username, "postId": postId}
+                    ])
+                  : FieldValue.arrayRemove([
+                      {"username": username, "postId": postId}
+                    ])
+            },
+            SetOptions(merge: true));
+
+        transection
+            .update(users, {"likes": FieldValue.increment(isLiked ? 1 : -1)});
+      });
+      return true;
+    } catch (error) {
+      logs.e("$fileName.addLikes ${error.toString()}");
+    }
+    return false;
+  }
+
+  Future<List<dynamic>> getLikedPost() async {
+    String? username = FirebaseOperation().retriveUsername();
+    DocumentSnapshot? snapshot =
+        await instance.collection("LikedPost").doc(username).get();
+
+    Map<String, dynamic>? data = snapshot.data() as Map<String, dynamic>?;
+
+    if (data == null) throw Exception("given data is null");
+
+    return data["LikedPost"];
   }
 }
 

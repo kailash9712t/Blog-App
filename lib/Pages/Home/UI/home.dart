@@ -1,6 +1,7 @@
-import 'dart:io';
+// ignore_for_file: non_constant_identifier_names
 
 import 'package:blog/Models/BlogPost/post.dart';
+import 'package:blog/Models/User/user_profile.dart';
 import 'package:blog/Pages/Home/State/home.dart';
 import 'package:blog/Utils/user_data_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -116,35 +117,35 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
               radius: 24,
               backgroundColor: Colors.grey,
               child: ClipOval(
-                child: Consumer<UserDataProvider>(
-                    builder: (context, instance, child) {
-                  logs.i("profile url : ${instance.userModel.profileUrl}");
-                  return Image.network(
-                    instance.userModel.profileUrl ?? '',
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, trace) {
-                      return Image.asset(
-                        "Assets/Image/default_user.png",
+                child: Selector<UserProfileState, String?>(
+                    builder: (_, profile_url, __) {
+                      return Image.network(
+                        profile_url ?? '',
                         width: 48,
                         height: 48,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, trace) {
+                          return Image.asset(
+                            "Assets/Image/default_user.png",
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                          );
+                        },
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return SizedBox(
+                            height: 5,
+                            width: 5,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.black,
+                            ),
+                          );
+                        },
                       );
                     },
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return SizedBox(
-                        height: 5,
-                        width: 5,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.black,
-                        ),
-                      );
-                    },
-                  );
-                }),
+                    selector: (_, model) => model.model.profileUrl),
               ),
             ),
           ),
@@ -176,10 +177,9 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
               CircleAvatar(
                 radius: 24,
                 backgroundColor: Colors.grey,
-                child: ClipOval(child: Consumer<UserDataProvider>(
-                    builder: (context, instance, child) {
+                child: ClipOval(child: Selector<UserProfileState,String?>(builder: (_,profile_url,__){
                   return Image.network(
-                    instance.userModel.profileUrl ?? '',
+                    profile_url ?? '',
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,
@@ -196,7 +196,7 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
                       return CircularProgressIndicator();
                     },
                   );
-                })),
+                }, selector: (_,model) => model.model.profileUrl)),
               ),
               SizedBox(width: 12),
               Expanded(
@@ -497,7 +497,7 @@ class _BlogHomeScreenState extends State<BlogHomeScreen>
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Image.asset(
-                          'Assets/Image/image_placeholder.png',
+                          'Assets\Image\failed_image.png',
                           width: double.infinity,
                           height: 200,
                           fit: BoxFit.cover,

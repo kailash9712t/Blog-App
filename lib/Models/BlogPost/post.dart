@@ -6,10 +6,10 @@ class BlogPost {
   final String timeAgo;
   final String content;
   final String? profileUrl;
-  final int likes; // add final
+  int likes; 
   final int comments;
   final int reposts;
-  final bool isLiked; // add final
+  bool isLiked; 
   final List<String> contentImage;
 
   BlogPost(
@@ -34,6 +34,7 @@ class BlogPost {
         id: json["postID"] as String,
         userName: json["userName"] as String,
         userAvatar: json["userAvatar"] as String?,
+        profileUrl: json["profileUrl"],
         timeAgo: json["timeAgo"].toString(),
         content: json["content"] as String,
         likes: json["likes"] as int,

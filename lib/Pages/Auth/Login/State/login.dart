@@ -46,9 +46,18 @@ class LoginPageModel extends ChangeNotifier {
         if (!context.mounted) return;
 
         if (isLogin == 0) {
-          await getData(context);
+          Map<String, dynamic> data = await getData(context);
 
           if (!context.mounted) return;
+
+          if (!data["Status"]) {
+            CustomSnackbar()
+                .showMessage(context, Icons.close, Colors.red, data["Reason"]);
+
+            await FirebaseOperation().logout();
+
+            return;
+          }
 
           CustomSnackbar()
               .showMessage(context, Icons.check_circle, Colors.green, message);
@@ -70,41 +79,50 @@ class LoginPageModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> getData(BuildContext context) async {
-    String? username = FirebaseOperation().retriveUsername();
+  Future<Map<String, dynamic>> getData(BuildContext context) async {
+    try {
+      String? username = FirebaseOperation().retriveUsername();
 
-    if (username == null) return;
+      if (username == null) {
+        return {"Status": true, "Reason": "Username not available"};
+      }
 
-    Map<String, dynamic>? userData =
-        await FireStoreOperation().getUserData(username);
+      Map<String, dynamic>? userData =
+          await FireStoreOperation().getUserData(username);
 
-    if (userData == null) return;
+      if (userData == null) {
+        return {"Status": false, "Reason": "User data not found"};
+      }
 
-    if (!context.mounted) return;
+      if (!context.mounted)
+        return {"Status": false, "Reason": "current Context not available"};
 
+      logs.i("user data retrive from firebase $userData");
 
-    logs.i("user data retrive from firebase $userData");
+      Timestamp time = userData["joiningDate"];
+      DateTime again = time.toDate();
 
-    Timestamp time = userData["joiningDate"];
-    DateTime again = time.toDate();
+      context.read<UserProfileState>().intializeData(
+          username: userData["username"],
+          displayName: userData["displayName"],
+          bio: userData["bio"],
+          cover_url: userData["coverImageUrl"],
+          profie_url: userData["profileImageUrl"],
+          email: userData["email"],
+          joiningDate: DateAndTime().monthAndYear(again),
+          location: userData["location"],
+          followers: userData["followers"] as int,
+          following: userData["following"] as int,
+          completeProfile: userData["isProfileCompleted"] as bool);
 
-    context.read<UserProfileState>().intializeData(
-        username: userData["username"],
-        displayName: userData["displayName"],
-        bio: userData["bio"],
-        cover_url: userData["coverImageUrl"],
-        profie_url: userData["profileImageUrl"],
-        email: userData["email"],
-        joiningDate: DateAndTime().monthAndYear(again),
-        location: userData["location"],
-        followers: userData["followers"] as int,
-        following: userData["following"] as int,
-        completeProfile: userData["isProfileCompleted"] as bool);
+      if (!context.mounted)
+        return {"Status": false, "Reason": "current Context not available"};
 
-    print(context.read<UserProfileState>().toJson());
-
-    if (!context.mounted) return;
-
-    await context.read<UserProfileState>().storeLocally();
+      await context.read<UserProfileState>().storeLocally();
+    } catch (error) {
+      logs.i("getModel ${error.toString()}");
+      return {"Status": false, "Reason": "Error Occurs ${error.toString()}"};
+    }
+    return {"Status": true, "Reason": "user data fatched"};
   }
 }

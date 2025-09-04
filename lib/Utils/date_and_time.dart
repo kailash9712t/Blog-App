@@ -1,4 +1,13 @@
+import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'package:logger/web.dart';
+
 class DateAndTime {
+
+  Logger logs = Logger(
+        level: kReleaseMode ? Level.off : Level.debug,
+        printer: PrettyPrinter(methodCount: 1, colors: true));
+
   String? monthAndYear(DateTime? time) {
     if (time == null) return null;
 
@@ -58,6 +67,8 @@ class DateAndTime {
 
     final diff = now.difference(givenDateTime);
 
+    logs.i(givenDateTime);
+
     if (diff.inSeconds < 60) {
       return "${diff.inSeconds} s";
     } else if (diff.inMinutes < 60) {
@@ -76,9 +87,7 @@ class DateAndTime {
   }
 
   DateTime stringTimeStampToDateTime(String time) {
-    String tsString = "Timestamp(seconds=1754917206, nanoseconds=431000000)";
-
-    var parts = tsString.replaceAll(RegExp(r'[^\d,]'), '').split(',');
+    var parts = time.replaceAll(RegExp(r'[^\d,]'), '').split(',');
 
     int seconds = int.parse(parts[0]);
     int nanoseconds = int.parse(parts[1]);
@@ -88,5 +97,9 @@ class DateAndTime {
     );
 
     return dateTime;
+  }
+
+  String dateTimeToPostFormat(DateTime time) {
+    return DateFormat("h:mm a , MMM dd, yyyy").format(time);
   }
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:blog/Firebase/firebase.dart';
 import 'package:blog/Models/BlogPost/post.dart';
 import 'package:blog/Models/Hive_Model/UserData/user.dart';
+import 'package:blog/Models/User/user_profile.dart';
 import 'package:blog/Utils/cloudinary.dart';
 import 'package:blog/Utils/snackbar.dart';
 import 'package:blog/Utils/user_data_provider.dart';
@@ -164,7 +165,7 @@ class HomePageModel extends ChangeNotifier {
       if (text.isEmpty) {
         return updateStatus(UploadStatus.notStart);
       }
-      UserModel localUserData = context.read<UserDataProvider>().userModel;
+      UserModel localUserData = context.read<UserProfileState>().model;
 
       logs.i("publish post start ");
 
@@ -217,5 +218,11 @@ class HomePageModel extends ChangeNotifier {
     imageInMap.remove(removeIndexkey);
     imageInList = imageInMap.values.toList();
     notifyListeners();
+  }
+
+  void resetState() {
+    imageInList.clear();
+    imageInMap.clear();
+    assignIndex = 0;
   }
 }

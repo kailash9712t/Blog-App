@@ -5,6 +5,7 @@ import 'package:blog/Models/BlogPost/follow.dart';
 import 'package:blog/Models/BlogPost/post.dart';
 import 'package:blog/Models/Hive_Model/UserData/user.dart';
 import 'package:blog/Models/User/user_profile.dart';
+import 'package:blog/Pages/Home/State/home.dart';
 import 'package:blog/Utils/date_and_time.dart';
 import 'package:blog/Utils/user_data_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,6 +13,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:logger/web.dart';
 import 'package:provider/provider.dart';
 
@@ -104,42 +106,12 @@ class UserPageModel extends ChangeNotifier {
     personalPost[post.id] = post;
   }
 
-  Timer? userSpamLikes;
+  Map<String, Timer?> timer = {};
 
   void toggleLike(String? username, String postId, BuildContext context) async {
-    logs.i("clicked on like id : - $postId");
-
-    BlogPost? post = personalPost[postId];
-
-    if (post == null) {
-      throw Exception("post not found");
-    }
-
-    logs.i("clicked on like id : - ${post.likes} ${post.isLiked}");
-
-    post.likes = post.isLiked ? post.likes - 1 : post.likes + 1;
-    post.isLiked = !post.isLiked;
-    logs.i("clicked on like id : - ${post.likes} ${post.isLiked}");
+    logs.e("its start");
+    PostOperation().likedPost(timer, personalPost, username, postId, context);
     notifyListeners();
-    HapticFeedback.lightImpact();
-
-    if (userSpamLikes != null) {
-      userSpamLikes!.cancel();
-      userSpamLikes = null;
-      return;
-    }
-
-    if (username == null) {
-      logs.i("username is null");
-      return;
-    }
-
-    userSpamLikes = Timer(Duration(seconds: 3), () async {
-      bool response =
-          await HandlePost().addLikes(username, postId, post.isLiked);
-      userSpamLikes = null;
-      if (!response) throw Exception("user liked request failed");
-    });
   }
 
   Future<void> follow(BuildContext context, Map<String, dynamic> data) async {
@@ -188,8 +160,88 @@ class UserPageModel extends ChangeNotifier {
   List<String> mediaTab = [];
 
   void retrivePhotosfromMediaTab() async {
+    mediaTab = [];
     personalPost.forEach((key, value) {
       mediaTab.addAll(value.contentImage);
+    });
+  }
+
+  void resetState() {
+    isFollowing = false;
+    personalPost.clear();
+    likedPost.clear();
+    follower.clear();
+    following.clear();
+    mediaTab.clear();
+    userModel = UserModel();
+  }
+}
+
+class DotOperation {
+  void logOut(BuildContext context) async {
+    await FirebaseOperation().logout();
+
+    if (!context.mounted) return;
+
+    context.read<HomePageModel>().resetState();
+    context.read<UserPageModel>().resetState();
+    context.read<UserProfileState>().deleteBox();
+
+    context.go("/login");
+  }
+}
+
+class PostOperation {
+  void likedPost(
+      Map<String, Timer?> timerMap,
+      Map<String, BlogPost> personalPost,
+      String? username,
+      String postId,
+      BuildContext context) {
+    logs.i("clicked on like id : - $postId");
+
+    BlogPost? post = personalPost[postId];
+    if (post == null) {
+      throw Exception("post not found");
+    }
+
+    logs.i("clicked on like id : - ${post.likes} ${post.isLiked}");
+
+    post.likes = post.isLiked ? post.likes - 1 : post.likes + 1;
+    post.isLiked = !post.isLiked;
+
+    logs.i("clicked on like id : - ${post.likes} ${post.isLiked}");
+    HapticFeedback.lightImpact();
+
+    if (timerMap[postId] != null) {
+      timerMap[postId]!.cancel();
+      timerMap.remove(postId);
+      logs.i("Cancelled previous timer for post: $postId");
+      return;
+    }
+
+    if (username == null) {
+      logs.i("username is null");
+      return;
+    }
+
+    timerMap[postId] = Timer(Duration(seconds: 3), () async {
+      logs.i("Executing API call for post: $postId");
+      try {
+        bool response =
+            await HandlePost().addLikes(username, postId, post.isLiked);
+        if (!response) {
+          logs.e("API call failed for post: $postId");
+          post.likes = post.isLiked ? post.likes - 1 : post.likes + 1;
+          post.isLiked = !post.isLiked;
+        }
+      } catch (e) {
+        logs.e("Error in API call: $e");
+        post.likes = post.isLiked ? post.likes - 1 : post.likes + 1;
+        post.isLiked = !post.isLiked;
+      } finally {
+        timerMap.remove(postId);
+      }
     });
   }
 }

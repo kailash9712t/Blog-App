@@ -73,7 +73,9 @@ class _UserProfilePageState extends State<UserProfilePage>
 
     if (!mounted) return;
 
-    context.read<UserPageModel>().loadPost(context);
+    await context.read<UserPageModel>().loadPost(context);
+    if (!mounted) return;
+    context.read<UserPageModel>().retrivePhotosfromMediaTab();
   }
 
   @override
@@ -1029,22 +1031,40 @@ class _UserProfilePageState extends State<UserProfilePage>
                   HapticFeedback.selectionClick();
                 },
               ),
-              ListTile(
-                leading: Icon(Icons.block),
-                title: Text('Block User'),
-                onTap: () {
-                  Navigator.pop(context);
-                  HapticFeedback.selectionClick();
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.report),
-                title: Text('Report User'),
-                onTap: () {
-                  Navigator.pop(context);
-                  HapticFeedback.selectionClick();
-                },
-              ),
+              if (!widget.isUserProfile)
+                ListTile(
+                  leading: Icon(Icons.block),
+                  title: Text('Block User'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    HapticFeedback.selectionClick();
+                  },
+                ),
+              if (!widget.isUserProfile)
+                ListTile(
+                  leading: Icon(Icons.report),
+                  title: Text('Report User'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    HapticFeedback.selectionClick();
+                  },
+                ),
+              if (widget.isUserProfile)
+                ListTile(
+                  leading: Icon(
+                    Icons.exit_to_app,
+                    color: Colors.red,
+                  ),
+                  title: Text(
+                    'Log Out',
+                    style: TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                  onTap: () {
+                    DotOperation().logOut(context);
+                    HapticFeedback.selectionClick();
+                  },
+                ),
             ],
           ),
         );

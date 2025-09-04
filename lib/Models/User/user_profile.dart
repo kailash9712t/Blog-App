@@ -1,11 +1,16 @@
 // ignore_for_file: non_constant_identifier_names
 
 import 'package:blog/Models/Hive_Model/UserData/user.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:logger/logger.dart';
 
 class UserProfileState extends ChangeNotifier {
   UserModel model = UserModel();
+
+  Logger logs = Logger(
+      level: kReleaseMode ? Level.off : Level.debug,
+      printer: PrettyPrinter(methodCount: 1, colors: true));
 
   void intializeData(
       {String? displayName,
@@ -37,19 +42,36 @@ class UserProfileState extends ChangeNotifier {
   }
 
   Future<void> storeLocally() async {
-    Box box = Hive.isBoxOpen("UserBox")
-        ? Hive.box<UserModel>("UserBox")
-        : await Hive.openBox<UserModel>("UserBox");
+    try {
+      Box box = Hive.isBoxOpen("UserBox")
+          ? Hive.box<UserModel>("UserBox")
+          : await Hive.openBox<UserModel>("UserBox");
 
-    await box.put("UserData", model);
+      await box.put("UserData", model);
+    } catch (error) {
+      logs.e("storeLocally ${error.toString()}");
+    }
   }
 
   Future<void> loadData() async {
-    Box box = Hive.isBoxOpen("UserBox")
-        ? Hive.box<UserModel>("UserBox")
-        : await Hive.openBox<UserModel>("UserBox");
+    try {
+      Box box = Hive.isBoxOpen("UserBox")
+          ? Hive.box<UserModel>("UserBox")
+          : await Hive.openBox<UserModel>("UserBox");
 
-    model = await box.get("UserData");
+      model = await box.get("UserData");
+    } catch (error) {
+      logs.e("loadData ${error.toString()}");
+    }
+  }
+
+  Future<void> deleteBox() async {
+    try {
+      await Hive.deleteBoxFromDisk("UserBox");
+      model = UserModel();
+    } catch (error) {
+      logs.e("deleteBox ${error.toString()}");
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -63,9 +85,9 @@ class UserProfileState extends ChangeNotifier {
       "completeProfile": model.completeProfile,
       "coverUrl": model.coverUrl,
       "bio": model.bio,
-      "followers" : model.followers,
-      "following" : model.following,
-      "website" : model.website,
+      "followers": model.followers,
+      "following": model.following,
+      "website": model.website,
     };
   }
 }

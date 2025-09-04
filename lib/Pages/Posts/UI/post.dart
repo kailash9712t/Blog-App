@@ -117,7 +117,7 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
                                 ),
                               ),
                               Text(
-                                '${widget.post.userName} • ${DateAndTime().timeDifference(DateAndTime().stringTimeStampToDateTime(widget.post.timeAgo))}',
+                                '${widget.post.userName} • ${DateAndTime(). timeDifference(DateAndTime().stringTimeStampToDateTime(widget.post.timeAgo))}',
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
@@ -136,7 +136,7 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
 
                     // Tweet Text
                     Text(
-                      'hi my name is kailash',
+                      widget.post.content,
                       style: TextStyle(
                         fontSize: 16,
                         height: 1.4,
@@ -152,7 +152,7 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
                     Row(
                       children: [
                         Text(
-                          '12:34 PM • Oct 15, 2024',
+                          DateAndTime().dateTimeToPostFormat(DateAndTime().stringTimeStampToDateTime(widget.post.timeAgo)),
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -168,7 +168,7 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
                     Row(
                       children: [
                         Text(
-                          '$likeCount',
+                          '${widget.post.likes}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,

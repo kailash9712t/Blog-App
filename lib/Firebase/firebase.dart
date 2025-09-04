@@ -90,8 +90,19 @@ class FirebaseOperation {
     } catch (error) {
       logs.e("$fileName.retriveUsername ${error.toString()}");
     }
-
     return null;
+  }
+
+  Future<void> logout() async {
+    try {
+      User? user = auth.currentUser;
+
+      if (user == null) return;
+
+      await FirebaseAuth.instance.signOut();
+    } catch (error) {
+      logs.e("$fileName.logout ${error.toString()}");
+    }
   }
 }
 

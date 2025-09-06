@@ -4,6 +4,7 @@ import 'package:blog/Pages/Auth/Login/Ui/login.dart';
 import 'package:blog/Pages/Auth/ProfileSetUp/UI/profile_set.dart';
 import 'package:blog/Pages/Auth/ProfileSetUp1/UI/profile_set_up1.dart';
 import 'package:blog/Pages/Auth/Register/Ui/register.dart';
+import 'package:blog/Pages/Followers/UI/followers.dart';
 import 'package:blog/Pages/Home/UI/home.dart';
 import 'package:blog/Pages/Loading/UI/loading.dart';
 import 'package:blog/Pages/Posts/UI/post.dart';
@@ -50,6 +51,10 @@ GoRouter route = GoRouter(
           return TweetDetailPage(
             post: userPost,
           );
-        })
+        }),
+    GoRoute(
+        path: "/Following",
+        builder: (context, state) =>
+            FollowersPage(username: "kailash9712t", followersCount: 10)),
   ],
 );

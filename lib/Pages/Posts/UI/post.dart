@@ -1,8 +1,11 @@
+import 'package:blog/Models/BlogPost/comments.dart';
 import 'package:blog/Models/BlogPost/post.dart';
 import 'package:blog/Models/Hive_Model/UserData/user.dart';
 import 'package:blog/Models/User/user_profile.dart';
+import 'package:blog/Pages/Posts/State/post.dart';
 import 'package:blog/Pages/User/State/user.dart';
 import 'package:blog/Utils/date_and_time.dart';
+import 'package:blog/Utils/uuid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -18,31 +21,18 @@ class TweetDetailPage extends StatefulWidget {
 
 class _TweetDetailPageState extends State<TweetDetailPage> {
   bool isLiked = true;
-  int likeCount = 1;
+  // int likeCount = 1;
   TextEditingController commentController = TextEditingController();
-  List<Comment> comments = [
-    Comment(
-      username: "john_dev",
-      handle: "@johndev",
-      comment: "Nice room design! The green blocks look really cool 👍",
-      timeAgo: "2h",
-      avatar: "J",
-    ),
-    Comment(
-      username: "sarah_ui",
-      handle: "@sarahui",
-      comment: "Love the minimalist style. What software did you use for this?",
-      timeAgo: "1h",
-      avatar: "S",
-    ),
-    Comment(
-      username: "mike_designer",
-      handle: "@mikedesign",
-      comment: "The lighting and shadows look realistic. Great work!",
-      timeAgo: "45m",
-      avatar: "M",
-    ),
-  ];
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context
+          .read<PostPageState>()
+          .loadComments(widget.post.userName, widget.post.id);
+    });
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +107,7 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
                                 ),
                               ),
                               Text(
-                                '${widget.post.userName} • ${DateAndTime(). timeDifference(DateAndTime().stringTimeStampToDateTime(widget.post.timeAgo))}',
+                                '${widget.post.userName} • ${DateAndTime().timeDifference(DateAndTime().stringTimeStampToDateTime(widget.post.timeAgo))}',
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
@@ -145,14 +135,17 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
                     SizedBox(height: 16),
 
                     // Images Grid
-                    _buildPhotoLayout(widget.post.contentImage),
+                    if (widget.post.contentImage.isNotEmpty) ...[
+                      _buildPhotoLayout(widget.post.contentImage),
+                    ],
                     SizedBox(height: 16),
 
                     // Engagement Stats
                     Row(
                       children: [
                         Text(
-                          DateAndTime().dateTimeToPostFormat(DateAndTime().stringTimeStampToDateTime(widget.post.timeAgo)),
+                          DateAndTime().dateTimeToPostFormat(DateAndTime()
+                              .stringTimeStampToDateTime(widget.post.timeAgo)),
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontSize: 14,
@@ -184,7 +177,7 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
                         ),
                         SizedBox(width: 20),
                         Text(
-                          '${comments.length}',
+                          '${widget.post.comments}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -226,13 +219,7 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
                             isLiked ? Icons.favorite : Icons.favorite_border,
                             color: isLiked ? Colors.red : Colors.grey[600],
                           ),
-                          onPressed: () {
-                            setState(() {
-                              isLiked = !isLiked;
-                              likeCount =
-                                  isLiked ? likeCount + 1 : likeCount - 1;
-                            });
-                          },
+                          onPressed: () {},
                         ),
                         IconButton(
                           icon: Icon(
@@ -286,18 +273,19 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
                         TextButton(
                           onPressed: () {
                             if (commentController.text.isNotEmpty) {
-                              setState(() {
-                                comments.insert(
-                                    0,
-                                    Comment(
-                                      username: "you",
-                                      handle: "@you",
-                                      comment: commentController.text,
-                                      timeAgo: "now",
-                                      avatar: "U",
-                                    ));
-                                commentController.clear();
-                              });
+                              Comments userComment = Comments(
+                                  commentId: UUID().newId(),
+                                  username: context
+                                      .read<UserProfileState>()
+                                      .model
+                                      .username!,
+                                  content: commentController.text,
+                                  timeStamp: DateTime.now().toString(),
+                                  likes: 0,
+                                  comments: 0);
+                              context.read<PostPageState>().addComments(
+                                  userComment, widget.post.userName,widget.post.id);
+                              commentController.clear();
                             }
                           },
                           child: Text(
@@ -313,111 +301,128 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
                   ),
                   Divider(color: Colors.grey[200], height: 1),
 
-                  // Comments List
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: comments.length,
-                    itemBuilder: (context, index) {
-                      final comment = comments[index];
-                      return Container(
-                        padding: EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: Colors.grey[200]!,
-                              width: 0.5,
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: _getAvatarColor(comment.avatar),
-                              radius: 20,
-                              child: Text(
-                                comment.avatar,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
+                  Selector<PostPageState, Map<String, Comments>?>(
+                      builder: (_, post, __) {
+                        List? comments = post?.values.toList();
+
+                        if (comments == null) return SizedBox.shrink();
+
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: comments.length,
+                          itemBuilder: (context, index) {
+                            Comments comment = comments[index];
+                            return Container(
+                              padding: EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: Colors.grey[200]!,
+                                    width: 0.5,
+                                  ),
                                 ),
                               ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
+                              child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        comment.username,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
+                                  Image.network(
+                                        comment.userAvatar ?? '',
+                                        width: 100,
+                                        height: 100,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, trace) {
+                                          return Image.asset(
+                                            "Assets/Image/default_user.png",
+                                            width: 48,
+                                            height: 48,
+                                            fit: BoxFit.cover,
+                                          );
+                                        },
+                                        loadingBuilder:
+                                            (context, child, progress) {
+                                          if (progress == null) return child;
+                                          return CircularProgressIndicator();
+                                        },
                                       ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        comment.handle,
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 14,
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              comment.username,
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              comment.userHandle ?? ".....",
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              // '• ${DateAndTime().timeDifference(DateAndTime().stringTimeStampToDateTime(comment.timeStamp))}',
+                                              "1h",
+                                              style: TextStyle(
+                                                color: Colors.grey[600],
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        '• ${comment.timeAgo}',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 14,
+                                        SizedBox(height: 4),
+                                        Text(
+                                          comment.content,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            height: 1.4,
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    comment.comment,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      height: 1.4,
+                                        SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            IconButton(
+                                              padding: EdgeInsets.zero,
+                                              constraints: BoxConstraints(),
+                                              icon: Icon(
+                                                Icons.chat_bubble_outline,
+                                                size: 16,
+                                                color: Colors.grey[600],
+                                              ),
+                                              onPressed: () {},
+                                            ),
+                                            SizedBox(width: 20),
+                                            IconButton(
+                                              padding: EdgeInsets.zero,
+                                              constraints: BoxConstraints(),
+                                              icon: Icon(
+                                                Icons.favorite_border,
+                                                size: 16,
+                                                color: Colors.grey[600],
+                                              ),
+                                              onPressed: () {},
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: BoxConstraints(),
-                                        icon: Icon(
-                                          Icons.chat_bubble_outline,
-                                          size: 16,
-                                          color: Colors.grey[600],
-                                        ),
-                                        onPressed: () {},
-                                      ),
-                                      SizedBox(width: 20),
-                                      IconButton(
-                                        padding: EdgeInsets.zero,
-                                        constraints: BoxConstraints(),
-                                        icon: Icon(
-                                          Icons.favorite_border,
-                                          size: 16,
-                                          color: Colors.grey[600],
-                                        ),
-                                        onPressed: () {},
-                                      ),
-                                    ],
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                            );
+                          },
+                        );
+                      },
+                      selector: (_, model) => model.comments)
                 ],
               ),
             ),
@@ -937,22 +942,6 @@ class _TweetDetailPageState extends State<TweetDetailPage> {
         return Colors.grey;
     }
   }
-}
-
-class Comment {
-  final String username;
-  final String handle;
-  final String comment;
-  final String timeAgo;
-  final String avatar;
-
-  Comment({
-    required this.username,
-    required this.handle,
-    required this.comment,
-    required this.timeAgo,
-    required this.avatar,
-  });
 }
 
 class CheckerPainter extends CustomPainter {

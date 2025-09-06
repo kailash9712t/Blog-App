@@ -1,5 +1,10 @@
+import 'package:blog/Models/BlogPost/comments.dart';
+import 'package:blog/Models/BlogPost/post.dart';
+import 'package:blog/Pages/Posts/UI/post.dart';
+import 'package:blog/Utils/conversion.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/web.dart';
 
@@ -281,9 +286,37 @@ class HandlePost {
 
     Map<String, dynamic>? data = snapshot.data() as Map<String, dynamic>?;
 
+    logs.i("here liked post : $data");
+
     if (data == null) throw Exception("given data is null");
 
     return data["LikedPost"];
+  }
+
+  Future<Map<String, BlogPost>?> fetchAndProcessTweets(
+      List<Map<String, dynamic>> tweetsData) async {
+    try {
+      List<Future<DocumentSnapshot>> futures = tweetsData.map((tweetInfo) {
+        return FirebaseFirestore.instance
+            .collection('Users')
+            .doc(tweetInfo['username'])
+            .collection('Tweet')
+            .doc(tweetInfo['postId'])
+            .get();
+      }).toList();
+
+      List<DocumentSnapshot> results = await Future.wait(futures);
+
+      Map<String, BlogPost>? processedTweets =
+          Conversion().documentSnapshotList.toMapList(results);
+
+      print("here liked post of all data $processedTweets");
+
+      return processedTweets;
+    } catch (e) {
+      print('Error fetching and processing tweets: $e');
+      return null;
+    }
   }
 }
 
@@ -320,5 +353,95 @@ class Relation {
     }
 
     return false;
+  }
+}
+
+class CommentsOperation {
+  FirebaseFirestore instance = FirebaseFirestore.instance;
+  Future<bool> addComment(Comments comment, String commentOwnerUsername,String postId) async {
+    try {
+      DocumentReference commentReference = instance
+          .collection("Users")
+          .doc(commentOwnerUsername)
+          .collection("Tweet")
+          .doc(postId)
+          .collection("Comments")
+          .doc(comment.commentId);
+
+      DocumentReference commentReference1 =
+          instance.collection("Users").doc(commentOwnerUsername).collection("Tweet").doc(postId);
+
+      WriteBatch batch = instance.batch();
+
+      batch.set(commentReference, comment.toJson());
+      batch.update(commentReference1, {"comments": FieldValue.increment(1)});
+
+      await batch.commit();
+
+      return true;
+    } catch (error) {
+      logs.i("Comments.addComment ${error.toString()}");
+    }
+
+    return false;
+  }
+
+  Future<bool> removeComments(
+      String commentOwnerUsername, String commentId) async {
+    try {
+      DocumentReference commentReference = instance
+          .collection("Users")
+          .doc(commentOwnerUsername)
+          .collection("Comments")
+          .doc(commentId);
+
+      DocumentReference commentReference1 = instance
+          .collection("Users")
+          .doc(commentOwnerUsername)
+          .collection("Tweet")
+          .doc(commentId);
+
+      WriteBatch batch = instance.batch();
+
+      batch.delete(commentReference);
+      batch.set(commentReference1, {"comments": FieldValue.increment(-1)});
+
+      await batch.commit();
+
+      return true;
+    } catch (error) {
+      logs.i("Comments.removeComments ${error.toString()}");
+    }
+
+    return false;
+  }
+
+  Future<Map<String, Comments>?> loadComments(
+      String commentOwnerUsername, String commentId) async {
+    try {
+      QuerySnapshot snapshot = await instance
+          .collection("Users")
+          .doc(commentOwnerUsername)
+          .collection("Tweet")
+          .doc(commentId)
+          .collection("Comments")
+          .get();
+      List<QueryDocumentSnapshot> documentSnapshot = snapshot.docs;
+
+      Map<String, Comments> comments = {};
+
+      for (var singleDoc in documentSnapshot) {
+        Comments currentComment =
+            Comments.fromJson(singleDoc.data() as Map<String, dynamic>);
+
+        comments[currentComment.commentId] = currentComment;
+      }
+
+      return comments;
+    } catch (error) {
+      logs.i("Comments.removeComments ${error.toString()}");
+    }
+
+    return null;
   }
 }

@@ -3,10 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:logger/web.dart';
 
 class DateAndTime {
-
   Logger logs = Logger(
-        level: kReleaseMode ? Level.off : Level.debug,
-        printer: PrettyPrinter(methodCount: 1, colors: true));
+      level: kReleaseMode ? Level.off : Level.debug,
+      printer: PrettyPrinter(methodCount: 1, colors: true));
 
   String? monthAndYear(DateTime? time) {
     if (time == null) return null;
@@ -94,12 +93,14 @@ class DateAndTime {
 
     DateTime dateTime = DateTime.fromMillisecondsSinceEpoch(
       seconds * 1000 + (nanoseconds / 1000000).round(),
-    );
+      isUtc: true, // Firestore stores in UTC
+    ).toLocal(); // Convert to your device's local timezone
 
     return dateTime;
   }
 
   String dateTimeToPostFormat(DateTime time) {
+    logs.i("time stamp i got $time");
     return DateFormat("h:mm a , MMM dd, yyyy").format(time);
   }
 }

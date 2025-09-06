@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:blog/Firebase/firebase.dart';
+import 'package:blog/Models/User/user_profile.dart';
 import 'package:blog/Utils/cloudinary.dart';
 import 'package:blog/Utils/snackbar.dart';
-import 'package:blog/Utils/user_data_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -55,7 +55,6 @@ class ProfileSetUp1 extends ChangeNotifier {
   ) async {
     String currentMethod = "profileDataStore1";
 
-    UserDataProvider userDataInstance = context.read<UserDataProvider>();
 
     try {
       isLoading = true;
@@ -94,14 +93,16 @@ class ProfileSetUp1 extends ChangeNotifier {
 
       if (response) {
         print("let see here");
-        userDataInstance.loadData(
+
+        UserProfileState userDataInstance = context.read<UserProfileState>();
+        userDataInstance.intializeData(
             displayName: displayName,
             bio: bio,
-            profileUrl: profileImage,
-            coverUrl: coverImage,
+            profie_url: profileImage,
+            cover_url: coverImage,
             location: selectedCountry);
 
-        print("check point 1"); 
+        print("check point 1");
 
         await userDataInstance.storeLocally();
 

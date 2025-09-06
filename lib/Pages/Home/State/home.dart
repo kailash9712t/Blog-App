@@ -6,7 +6,6 @@ import 'package:blog/Models/Hive_Model/UserData/user.dart';
 import 'package:blog/Models/User/user_profile.dart';
 import 'package:blog/Utils/cloudinary.dart';
 import 'package:blog/Utils/snackbar.dart';
-import 'package:blog/Utils/user_data_provider.dart';
 import 'package:blog/Utils/uuid.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

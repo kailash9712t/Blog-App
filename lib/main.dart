@@ -6,6 +6,7 @@ import 'package:blog/Pages/Auth/ProfileSetUp/State/profile_set.dart';
 import 'package:blog/Pages/Auth/ProfileSetUp1/State/profile_set_up1.dart';
 import 'package:blog/Pages/Auth/Register/State/register.dart';
 import 'package:blog/Pages/Home/State/home.dart';
+import 'package:blog/Pages/Posts/State/post.dart';
 import 'package:blog/Pages/User/State/user.dart';
 import 'package:blog/Routes/routes.dart';
 import 'package:blog/Utils/user_data_provider.dart';
@@ -46,7 +47,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => EmailVerificationModel()),
         ChangeNotifierProvider(create: (context) => UserPageModel()),
         ChangeNotifierProvider(create: (context) => HomePageModel()),
-        ChangeNotifierProvider(create: (context) => UserProfileState())
+        ChangeNotifierProvider(create: (context) => UserProfileState()),
+        ChangeNotifierProvider(create: (context) => PostPageState())
+
       ],
       child: MaterialApp.router(
         title: 'Flutter Demo',

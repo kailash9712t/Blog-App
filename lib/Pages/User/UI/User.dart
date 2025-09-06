@@ -63,13 +63,17 @@ class _UserProfilePageState extends State<UserProfilePage>
   }
 
   void mainTask() async {
-    await context.read<UserPageModel>().loadLikedPost();
-
-    if (!mounted) return;
-
     await context
         .read<UserPageModel>()
         .initialTask(context, widget.isUserProfile, widget.username);
+
+    if (!mounted) return;
+
+    await context.read<UserPageModel>().getAllLikedPost();
+
+    if (!mounted) return;
+
+    await context.read<UserPageModel>().loadLikedPost();
 
     if (!mounted) return;
 
@@ -377,7 +381,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                         SizedBox(width: 20),
                         Selector<UserProfileState, int>(
                           builder: (_, followers, __) {
-                            return _buildStatItem('Following', followers);
+                            return _buildStatItem('Followers', followers);
                           },
                           selector: (_, model) => model.model.followers,
                         ),
@@ -423,6 +427,7 @@ class _UserProfilePageState extends State<UserProfilePage>
   Widget _buildStatItem(String label, int count) {
     return GestureDetector(
       onTap: () {
+        context.push("/Following");
         HapticFeedback.selectionClick();
       },
       child: RichText(
@@ -502,7 +507,7 @@ class _UserProfilePageState extends State<UserProfilePage>
 
   Widget _buildLikesTab() {
     return Consumer<UserPageModel>(builder: (context, instance, child) {
-      List<BlogPost> likedPost = [];
+      List<BlogPost> likedPost = instance.detailLikedPost.values.toList();
 
       return ListView.builder(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),

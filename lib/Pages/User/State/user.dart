@@ -6,6 +6,7 @@ import 'package:blog/Models/BlogPost/post.dart';
 import 'package:blog/Models/Hive_Model/UserData/user.dart';
 import 'package:blog/Models/User/user_profile.dart';
 import 'package:blog/Pages/Home/State/home.dart';
+import 'package:blog/Utils/conversion.dart';
 import 'package:blog/Utils/date_and_time.dart';
 import 'package:blog/Utils/user_data_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -24,6 +25,8 @@ class UserPageModel extends ChangeNotifier {
   bool isFollowing = false;
 
   Map<String, BlogPost> personalPost = {};
+  Map<String, BlogPost> detailLikedPost = {};
+
   List<dynamic> likedPost = [];
 
   List<Follow> follower = [];
@@ -87,6 +90,22 @@ class UserPageModel extends ChangeNotifier {
     }
   }
 
+  Future<void> loadLikedPost() async {
+    try {
+      List<Map<String, dynamic>> mapOfLikedPost =
+          Conversion().dynamicList.toMapList(likedPost);
+      Map<String, BlogPost>? post =
+          await HandlePost().fetchAndProcessTweets(mapOfLikedPost);
+
+      if (post == null) return;
+
+      detailLikedPost = post;
+      notifyListeners();
+    } catch (error) {
+      logs.i("loadLikedPost ${error.toString()}");
+    }
+  }
+
   void handleList(List<Map<String, dynamic>> data) async {
     try {
       for (int i = 0; i < data.length; i++) {
@@ -110,7 +129,7 @@ class UserPageModel extends ChangeNotifier {
 
   void toggleLike(String? username, String postId, BuildContext context) async {
     logs.e("its start");
-    PostOperation().likedPost(timer, personalPost, username, postId, context);
+    PostOperation().likedPost(timer, personalPost, detailLikedPost,username, postId, context);
     notifyListeners();
   }
 
@@ -131,7 +150,7 @@ class UserPageModel extends ChangeNotifier {
     }
   }
 
-  Future<void> loadLikedPost() async {
+  Future<void> getAllLikedPost() async {
     try {
       likedPost = await HandlePost().getLikedPost();
       hashSetOperation();
@@ -192,9 +211,21 @@ class DotOperation {
 }
 
 class PostOperation {
+  void reactOnPost(Map<String, BlogPost> posts, Map<String, BlogPost> likedPost,
+      String postId, bool indicator) {
+    if (indicator) {
+      posts[postId]?.isLiked = true;
+      likedPost.remove(postId);
+    } else {
+      posts[postId]?.isLiked = false;
+      likedPost[postId] = posts[postId]!;
+    }
+  }
+
   void likedPost(
       Map<String, Timer?> timerMap,
       Map<String, BlogPost> personalPost,
+      Map<String, BlogPost> likedPost,
       String? username,
       String postId,
       BuildContext context) {
@@ -207,8 +238,11 @@ class PostOperation {
 
     logs.i("clicked on like id : - ${post.likes} ${post.isLiked}");
 
+    reactOnPost(personalPost, likedPost, postId, post.isLiked);
+
     post.likes = post.isLiked ? post.likes - 1 : post.likes + 1;
     post.isLiked = !post.isLiked;
+
 
     logs.i("clicked on like id : - ${post.likes} ${post.isLiked}");
     HapticFeedback.lightImpact();
@@ -225,7 +259,7 @@ class PostOperation {
       return;
     }
 
-    timerMap[postId] = Timer(Duration(seconds: 3), () async {
+    timerMap[postId] = Timer(Duration(seconds: 2), () async {
       logs.i("Executing API call for post: $postId");
       try {
         bool response =
